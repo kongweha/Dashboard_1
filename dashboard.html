@@ -141,9 +141,9 @@
           </div>
         </div>
 
-        <div id="tab-demographics" class="tab-content hidden grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
+        <div id="tab-demographics" class="tab-content hidden grid-cols-1 gap-6 lg:gap-8">
           
-          <div class="col-span-1 xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-5 flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-500 font-bold uppercase mb-1">กลุ่มผู้ใช้งานหลัก (Status)</p>
@@ -164,9 +164,10 @@
             <div class="mb-6 border-b border-slate-100 pb-4"><h3 class="text-xl font-bold text-slate-800">สถานภาพผู้ใช้งาน (Status)</h3></div>
             <div class="relative h-[350px] w-full"><canvas id="statusChart"></canvas></div>
           </div>
+          
           <div class="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
             <div class="mb-6 border-b border-slate-100 pb-4"><h3 class="text-xl font-bold text-slate-800">คณะ/สังกัด (Affiliation)</h3></div>
-            <div class="relative h-[350px] w-full"><canvas id="affiliationChart"></canvas></div>
+            <div class="relative h-[450px] w-full flex justify-center"><canvas id="affiliationChart"></canvas></div>
           </div>
         </div>
 
@@ -223,7 +224,7 @@
             <div class="mb-8">
               <div class="mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
                 <i data-lucide="cloud" class="w-5 h-5 text-blue-500"></i>
-                <h3 class="text-lg font-bold text-slate-800">คีย์เวิร์ดที่พบบ่อย (Feedback Word Cloud)</h3>
+                <h3 class="text-lg font-bold text-slate-800">คีย์เวิร์ดหลักที่พบบ่อย (Top 5 Keywords)</h3>
               </div>
               <div id="word-cloud-container" class="w-full min-h-[150px]">
                 </div>
@@ -243,10 +244,11 @@
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1j3D0BeIND6-ekYUiYXEDmmDO_6-K9wYRl9TRYOBUY5o/export?format=csv";
 
+    // สลับสีเพื่อให้ Pie chart ดูหลากหลายและอ่านง่ายขึ้น
     const CHART_COLORS = [
       '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
       '#14B8A6', '#F43F5E', '#84CC16', '#06B6D4', '#6366F1', 
-      '#D946EF', '#F97316'
+      '#D946EF', '#F97316', '#34D399', '#A78BFA', '#FCA5A5'
     ];
 
     const MENUS = [
@@ -271,6 +273,11 @@
       lucide.createIcons();
       fetchData();
     });
+
+    // ฟังก์ชันที่ถูกเรียกใช้ตอนคลิก Word Cloud เพื่อแสดงจำนวนความถี่
+    window.showWordCount = function(word, count) {
+      document.getElementById('word-cloud-info').innerHTML = `<span class="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full border border-blue-200 shadow-sm transition-all duration-300">คำว่า <strong>"${word}"</strong> พบจำนวน <strong>${count}</strong> ครั้ง</span>`;
+    };
 
     function renderMenus() {
       const desktopNav = document.getElementById('desktop-nav');
@@ -310,16 +317,14 @@
       const menuObj = MENUS.find(m => m.id === tabId);
       document.getElementById('header-title').innerText = menuObj ? menuObj.title : '';
 
-      // Fix: ซ่อนทุกแท็บและเคลียร์คลาส grid
       document.querySelectorAll('.tab-content').forEach(el => {
         el.classList.add('hidden');
         el.classList.remove('grid');
       });
 
-      // Fix: เปิดแสดงเฉพาะ Tab ที่เลือกให้ถูกต้อง
       const activeEl = document.getElementById(`tab-${tabId}`);
       if(activeEl) {
-         activeEl.classList.remove('hidden'); // ต้องเอา hidden ออกก่อนเสมอ
+         activeEl.classList.remove('hidden'); 
          if(tabId === 'demographics' || tabId === 'tools') {
              activeEl.classList.add('grid');
          }
@@ -473,7 +478,7 @@
 
       if (tabId === 'overview') {
         document.getElementById('stat-total').innerText = appStats.total;
-        document.getElementById('sum-purpose').innerText = appStats.purposeData.length > 0 ? appStats.purposeData[0].name : '-';
+        document.getElementById('sum-purpose').innerText = appStats.purposeData.length > 0 ? `${appStats.purposeData[0].name} (${appStats.purposeData[0].value} คน)` : '-';
         
         renderChart('purposeChart', 'pie', {
           labels: appStats.purposeData.map(d => d.name),
@@ -486,24 +491,23 @@
         }, { ...barOptions, indexAxis: 'y' });
       }
       else if (tabId === 'demographics') {
-        // อัปเดต Summary หน้า ข้อมูลผู้ใช้
-        document.getElementById('sum-status').innerText = appStats.statusData.length > 0 ? appStats.statusData[0].name : '-';
-        document.getElementById('sum-affil').innerText = appStats.affiliationData.length > 0 ? appStats.affiliationData[0].name : '-';
+        document.getElementById('sum-status').innerText = appStats.statusData.length > 0 ? `${appStats.statusData[0].name} (${appStats.statusData[0].value} คน)` : '-';
+        document.getElementById('sum-affil').innerText = appStats.affiliationData.length > 0 ? `${appStats.affiliationData[0].name} (${appStats.affiliationData[0].value} คน)` : '-';
 
         renderChart('statusChart', 'bar', {
           labels: appStats.statusData.map(d => truncateText(d.name, 20)),
           datasets: [{ data: appStats.statusData.map(d => d.value), backgroundColor: appStats.statusData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]), borderRadius: { topLeft: 6, topRight: 6 } }]
         }, barOptions);
 
-        renderChart('affiliationChart', 'bar', {
-          labels: appStats.affiliationData.map(d => truncateText(d.name, 22)),
-          datasets: [{ data: appStats.affiliationData.map(d => d.value), backgroundColor: appStats.affiliationData.map((_, i) => CHART_COLORS[(i + 4) % CHART_COLORS.length]), borderRadius: 4 }]
-        }, { ...barOptions, indexAxis: 'y' });
+        // เปลี่ยนเป็นกราฟวงกลมสำหรับคณะ/สังกัด
+        renderChart('affiliationChart', 'pie', {
+          labels: appStats.affiliationData.map(d => truncateText(d.name, 35)),
+          datasets: [{ data: appStats.affiliationData.map(d => d.value), backgroundColor: CHART_COLORS, borderWidth: 1 }]
+        }, { ...commonOptions, plugins: { legend: { position: window.innerWidth < 768 ? 'bottom' : 'right', labels: { boxWidth: 12, padding: 15 } } } });
       }
       else if (tabId === 'tools') {
-        // อัปเดต Summary หน้า AI Tools
-        document.getElementById('sum-tool').innerText = appStats.toolsData.length > 0 ? appStats.toolsData[0].name : '-';
-        document.getElementById('sum-activity').innerText = appStats.activitiesData.length > 0 ? appStats.activitiesData[0].name : '-';
+        document.getElementById('sum-tool').innerText = appStats.toolsData.length > 0 ? `${appStats.toolsData[0].name} (${appStats.toolsData[0].value} ครั้ง)` : '-';
+        document.getElementById('sum-activity').innerText = appStats.activitiesData.length > 0 ? `${appStats.activitiesData[0].name} (${appStats.activitiesData[0].value} ครั้ง)` : '-';
 
         renderChart('toolsChart', 'bar', {
           labels: appStats.toolsData.map(d => d.name),
@@ -553,15 +557,12 @@
           return;
         }
 
-        // --- สร้าง Word Cloud ---
         const allText = appStats.feedbacks.map(f => f.text).join(' ');
-        // ใช้ Intl.Segmenter ในการช่วยตัดคำภาษาไทย (รองรับในเบราว์เซอร์ใหม่ๆ)
         const segmenter = new Intl.Segmenter('th', { granularity: 'word' });
         const segments = segmenter.segment(allText);
         const wordCount = {};
         
-        // Stop words ภาษาไทยเบื้องต้นเพื่อตัดคำเชื่อมออก
-        const stopWords = ['และ', 'การ', 'ความ', 'ที่', 'มี', 'ให้', 'ใน', 'ของ', 'เป็น', 'ได้', 'จะ', 'ๆ', 'หรือ', 'ไป', 'ไม่', 'มาก', 'ก็', 'ใช้', 'สำหรับ', 'กับ', 'คือ', 'แต่', 'ทำ', 'งาน', 'ช่วย', 'สามารถ', 'อย่าง', 'จาก'];
+        const stopWords = ['และ', 'การ', 'ความ', 'ที่', 'มี', 'ให้', 'ใน', 'ของ', 'เป็น', 'ได้', 'จะ', 'ๆ', 'หรือ', 'ไป', 'ไม่', 'มาก', 'ก็', 'ใช้', 'สำหรับ', 'กับ', 'คือ', 'แต่', 'ทำ', 'งาน', 'ช่วย', 'สามารถ', 'อย่าง', 'จาก', 'ให้', 'เพื่อ'];
 
         for (const { segment, isWordLike } of segments) {
             const word = segment.trim();
@@ -570,22 +571,25 @@
             }
         }
 
-        const sortedWords = Object.entries(wordCount).sort((a, b) => b[1] - a[1]).slice(0, 40);
-        let cloudHtml = `<div class="flex flex-wrap justify-center gap-x-4 gap-y-2 items-center py-8 bg-blue-50/30 rounded-xl border border-blue-100 px-6">`;
+        // ขอไม่เกิน 5 Keyword ตามที่ระบุ
+        const sortedWords = Object.entries(wordCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        let cloudHtml = `<div class="flex flex-wrap justify-center gap-x-6 gap-y-4 items-center py-8 bg-blue-50/30 rounded-xl border border-blue-100 px-6">`;
         
         if(sortedWords.length > 0) {
             const maxFreq = sortedWords[0][1];
             sortedWords.forEach(([word, freq]) => {
-                const size = 0.85 + (freq / maxFreq) * 1.8; // Scale font-size
-                const colors = ['text-blue-600', 'text-indigo-600', 'text-emerald-600', 'text-amber-600', 'text-rose-500', 'text-slate-700'];
+                const size = 1.2 + (freq / maxFreq) * 1.5; 
+                const colors = ['text-blue-600', 'text-indigo-600', 'text-emerald-600', 'text-amber-600', 'text-rose-500'];
                 const color = colors[Math.floor(Math.random() * colors.length)];
-                cloudHtml += `<span class="${color} font-bold leading-none tracking-tight transition-transform hover:scale-110 cursor-default" style="font-size: ${size}rem; opacity: ${0.6 + (freq/maxFreq)*0.4}">${word}</span>`;
+                // เพิ่มปุ่มที่คลิกได้
+                cloudHtml += `<button onclick="showWordCount('${word}', ${freq})" class="${color} font-bold leading-none tracking-tight transition-transform hover:scale-110 cursor-pointer focus:outline-none" style="font-size: ${size}rem; opacity: ${0.7 + (freq/maxFreq)*0.3}">${word}</button>`;
             });
         }
         cloudHtml += `</div>`;
+        cloudHtml += `<div id="word-cloud-info" class="text-center mt-4 text-sm h-8 flex items-center justify-center text-slate-400">คลิกที่คำเพื่อดูจำนวนความถี่</div>`;
+        
         wordCloudContainer.innerHTML = cloudHtml;
 
-        // --- สร้าง Feedback List ---
         let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
         appStats.feedbacks.forEach(fb => {
           html += `<div class="p-5 border border-slate-200 rounded-xl bg-slate-50 hover:bg-white hover:border-blue-300 hover:shadow-md transition-all group"><div class="flex justify-between items-start mb-3"><span class="text-xs font-bold px-3 py-1 bg-white border border-blue-100 text-blue-700 rounded-full shadow-sm">${fb.status}</span><span class="text-xs font-medium text-slate-400 bg-slate-100 px-2 py-1 rounded-md">${fb.time}</span></div><p class="text-slate-700 text-sm leading-relaxed whitespace-pre-wrap">${fb.text}</p></div>`;
@@ -594,7 +598,7 @@
         container.innerHTML = html;
       }
 
-      lucide.createIcons(); // วาดไอคอนใน Summary Card ใหม่
+      lucide.createIcons();
     }
   </script>
 </body>
