@@ -105,21 +105,32 @@
         
         <div id="tab-overview" class="tab-content hidden">
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden flex flex-col justify-center">
               <div class="relative z-10">
-                <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider mb-2">Total Registered</p>
+                <p class="text-blue-100 text-sm font-semibold uppercase tracking-wider mb-1">Total Registered</p>
                 <h3 class="text-5xl font-black tracking-tight"><span id="stat-total">0</span> <span class="text-xl font-medium text-blue-200">คน</span></h3>
               </div>
               <i data-lucide="users" class="w-32 h-32 absolute -right-6 -bottom-6 text-white opacity-10 transform -rotate-12"></i>
             </div>
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm col-span-1 md:col-span-2 flex items-center">
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center">
                <div class="flex items-start gap-4">
                  <div class="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
                    <i data-lucide="target" class="w-6 h-6 text-blue-600"></i>
                  </div>
                  <div>
-                   <p class="text-sm font-semibold text-slate-500 uppercase">วัตถุประสงค์ยอดนิยมอันดับ 1</p>
-                   <h4 id="sum-purpose" class="text-xl md:text-2xl font-bold text-slate-800 mt-1">-</h4>
+                   <p class="text-sm font-bold text-slate-500 uppercase">วัตถุประสงค์ยอดนิยมอันดับ 1</p>
+                   <h4 id="sum-purpose" class="text-lg font-bold text-slate-800 mt-1">-</h4>
+                 </div>
+               </div>
+            </div>
+            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex items-center">
+               <div class="flex items-start gap-4">
+                 <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center shrink-0">
+                   <i data-lucide="clock" class="w-6 h-6 text-indigo-600"></i>
+                 </div>
+                 <div>
+                   <p class="text-sm font-bold text-slate-500 uppercase">ระยะเวลาที่ใช้มากที่สุด</p>
+                   <h4 id="sum-duration" class="text-lg font-bold text-slate-800 mt-1">-</h4>
                  </div>
                </div>
             </div>
@@ -143,20 +154,27 @@
 
         <div id="tab-demographics" class="tab-content hidden grid-cols-1 gap-6 lg:gap-8">
           
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-5 flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-500 font-bold uppercase mb-1">กลุ่มผู้ใช้งานหลัก (Status)</p>
-                  <h4 id="sum-status" class="text-xl font-bold text-blue-700">-</h4>
+                  <h4 id="sum-status" class="text-lg font-bold text-blue-700">-</h4>
                 </div>
-                <div class="bg-blue-50 p-3 rounded-lg"><i data-lucide="user-check" class="text-blue-500 w-6 h-6"></i></div>
+                <div class="bg-blue-50 p-3 rounded-lg shrink-0 ml-2"><i data-lucide="user-check" class="text-blue-500 w-6 h-6"></i></div>
             </div>
             <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-5 flex items-center justify-between">
                 <div>
                   <p class="text-xs text-slate-500 font-bold uppercase mb-1">คณะ/สังกัด ที่ลงทะเบียนสูงสุด</p>
-                  <h4 id="sum-affil" class="text-xl font-bold text-indigo-700">-</h4>
+                  <h4 id="sum-affil" class="text-lg font-bold text-indigo-700">-</h4>
                 </div>
-                <div class="bg-indigo-50 p-3 rounded-lg"><i data-lucide="building" class="text-indigo-500 w-6 h-6"></i></div>
+                <div class="bg-indigo-50 p-3 rounded-lg shrink-0 ml-2"><i data-lucide="building" class="text-indigo-500 w-6 h-6"></i></div>
+            </div>
+            <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-5 flex items-center justify-between">
+                <div>
+                  <p class="text-xs text-slate-500 font-bold uppercase mb-1">จำนวนคณะ/สังกัดทั้งหมด</p>
+                  <h4 id="sum-total-affil" class="text-lg font-bold text-emerald-700">-</h4>
+                </div>
+                <div class="bg-emerald-50 p-3 rounded-lg shrink-0 ml-2"><i data-lucide="layers" class="text-emerald-500 w-6 h-6"></i></div>
             </div>
           </div>
 
@@ -226,8 +244,7 @@
                 <i data-lucide="cloud" class="w-5 h-5 text-blue-500"></i>
                 <h3 class="text-lg font-bold text-slate-800">คีย์เวิร์ดหลักที่พบบ่อย (Top 5 Keywords)</h3>
               </div>
-              <div id="word-cloud-container" class="w-full min-h-[150px]">
-                </div>
+              <div id="word-cloud-container" class="w-full min-h-[150px]"></div>
             </div>
 
             <div class="mb-6 border-b border-slate-100 pb-4">
@@ -244,7 +261,6 @@
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1j3D0BeIND6-ekYUiYXEDmmDO_6-K9wYRl9TRYOBUY5o/export?format=csv";
 
-    // สลับสีเพื่อให้ Pie chart ดูหลากหลายและอ่านง่ายขึ้น
     const CHART_COLORS = [
       '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
       '#14B8A6', '#F43F5E', '#84CC16', '#06B6D4', '#6366F1', 
@@ -274,7 +290,6 @@
       fetchData();
     });
 
-    // ฟังก์ชันที่ถูกเรียกใช้ตอนคลิก Word Cloud เพื่อแสดงจำนวนความถี่
     window.showWordCount = function(word, count) {
       document.getElementById('word-cloud-info').innerHTML = `<span class="bg-blue-100 text-blue-800 px-4 py-1.5 rounded-full border border-blue-200 shadow-sm transition-all duration-300">คำว่า <strong>"${word}"</strong> พบจำนวน <strong>${count}</strong> ครั้ง</span>`;
     };
@@ -479,6 +494,7 @@
       if (tabId === 'overview') {
         document.getElementById('stat-total').innerText = appStats.total;
         document.getElementById('sum-purpose').innerText = appStats.purposeData.length > 0 ? `${appStats.purposeData[0].name} (${appStats.purposeData[0].value} คน)` : '-';
+        document.getElementById('sum-duration').innerText = appStats.durationData.length > 0 ? `${appStats.durationData[0].name} (${appStats.durationData[0].value} คน)` : '-';
         
         renderChart('purposeChart', 'pie', {
           labels: appStats.purposeData.map(d => d.name),
@@ -493,13 +509,13 @@
       else if (tabId === 'demographics') {
         document.getElementById('sum-status').innerText = appStats.statusData.length > 0 ? `${appStats.statusData[0].name} (${appStats.statusData[0].value} คน)` : '-';
         document.getElementById('sum-affil').innerText = appStats.affiliationData.length > 0 ? `${appStats.affiliationData[0].name} (${appStats.affiliationData[0].value} คน)` : '-';
+        document.getElementById('sum-total-affil').innerText = `${appStats.affiliationData.length} หน่วยงาน`;
 
         renderChart('statusChart', 'bar', {
           labels: appStats.statusData.map(d => truncateText(d.name, 20)),
           datasets: [{ data: appStats.statusData.map(d => d.value), backgroundColor: appStats.statusData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]), borderRadius: { topLeft: 6, topRight: 6 } }]
         }, barOptions);
 
-        // เปลี่ยนเป็นกราฟวงกลมสำหรับคณะ/สังกัด
         renderChart('affiliationChart', 'pie', {
           labels: appStats.affiliationData.map(d => truncateText(d.name, 35)),
           datasets: [{ data: appStats.affiliationData.map(d => d.value), backgroundColor: CHART_COLORS, borderWidth: 1 }]
@@ -514,10 +530,15 @@
           datasets: [{ data: appStats.toolsData.map(d => d.value), backgroundColor: appStats.toolsData.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]), borderRadius: { topLeft: 6, topRight: 6 } }]
         }, barOptions);
 
+        // เปลี่ยนกราฟ Activities ให้เป็นกราฟแท่งแนวตั้ง (Vertical Bar) ตามที่ขอ
         renderChart('activitiesChart', 'bar', {
           labels: appStats.activitiesData.map(d => truncateText(d.name, 35)),
-          datasets: [{ data: appStats.activitiesData.map(d => d.value), backgroundColor: appStats.activitiesData.map((_, i) => CHART_COLORS[(i + 3) % CHART_COLORS.length]), borderRadius: 4 }]
-        }, { ...barOptions, indexAxis: 'y' });
+          datasets: [{ 
+             data: appStats.activitiesData.map(d => d.value), 
+             backgroundColor: appStats.activitiesData.map((_, i) => CHART_COLORS[(i + 3) % CHART_COLORS.length]), 
+             borderRadius: { topLeft: 6, topRight: 6 } 
+          }]
+        }, barOptions); 
       }
       else if (tabId === 'relationships') {
         let html = `<table class="w-full text-left border-collapse min-w-[800px]"><thead><tr><th class="p-4 border-b-2 border-slate-200 bg-slate-50 font-bold text-slate-700 w-1/3 rounded-tl-xl">วัตถุประสงค์ (Purpose)</th>`;
@@ -571,7 +592,6 @@
             }
         }
 
-        // ขอไม่เกิน 5 Keyword ตามที่ระบุ
         const sortedWords = Object.entries(wordCount).sort((a, b) => b[1] - a[1]).slice(0, 5);
         let cloudHtml = `<div class="flex flex-wrap justify-center gap-x-6 gap-y-4 items-center py-8 bg-blue-50/30 rounded-xl border border-blue-100 px-6">`;
         
@@ -581,7 +601,6 @@
                 const size = 1.2 + (freq / maxFreq) * 1.5; 
                 const colors = ['text-blue-600', 'text-indigo-600', 'text-emerald-600', 'text-amber-600', 'text-rose-500'];
                 const color = colors[Math.floor(Math.random() * colors.length)];
-                // เพิ่มปุ่มที่คลิกได้
                 cloudHtml += `<button onclick="showWordCount('${word}', ${freq})" class="${color} font-bold leading-none tracking-tight transition-transform hover:scale-110 cursor-pointer focus:outline-none" style="font-size: ${size}rem; opacity: ${0.7 + (freq/maxFreq)*0.3}">${word}</button>`;
             });
         }
