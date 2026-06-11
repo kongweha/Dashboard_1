@@ -541,22 +541,44 @@
         .map(item => ({ time: item.timestamp, text: item.feedback, status: cleanTextGlobal(item.status) }))
         .filter(item => item.text && item.text.trim().length > 1 && item.text.trim() !== '-');
 
-      // ลอจิกใหม่สำหรับ Active Users (คำนวณเฉพาะวันที่ล่าสุด)
-      let activeUsersCount = 0;
-      let latestDateStr = '';
-      if (appData.length > 0) {
-          // ดึงวันที่ล่าสุดจาก Row สุดท้าย
-          latestDateStr = appData[appData.length - 1].timestamp.split(' ')[0];
-          // กรองข้อมูลเฉพาะที่ตรงกับวันที่ล่าสุด
-          const latestDayData = appData.filter(item => item.timestamp && item.timestamp.split(' ')[0] === latestDateStr);
-          // นับจำนวนอีเมลที่ไม่ซ้ำกันของวันนั้น
-          activeUsersCount = new Set(latestDayData.map(item => item.email)).size;
-      }
+      // ลอจิกคำนวณ Active Users โดยอิงตามวันปัจจุบันของระบบ (Today)
+      const now = new Date();
+      const todayDay = now.getDate();
+      const todayMonth = now.getMonth() + 1;
+      const todayYear = now.getFullYear();
+      const todayLabelStr = `${todayDay}/${todayMonth}/${todayYear}`;
+
+      const todayData = appData.filter(item => {
+          if (!item.timestamp) return false;
+          const datePart = item.timestamp.split(' ')[0];
+          const parts = datePart.split(/[-/]/);
+          if (parts.length === 3) {
+              let d, m, y;
+              if (parts[0].length === 4) { // YYYY-MM-DD หรือ YYYY/MM/DD
+                  y = parseInt(parts[0], 10);
+                  m = parseInt(parts[1], 10);
+                  d = parseInt(parts[2], 10);
+              } else { // สมมติว่าเป็น DD/MM/YYYY ตามฟอร์แมตที่เคยเห็นในระบบ
+                  d = parseInt(parts[0], 10);
+                  m = parseInt(parts[1], 10);
+                  y = parseInt(parts[2], 10);
+                  // เผื่อกรณีที่เป็น MM/DD/YYYY
+                  if (m > 12) { 
+                      d = parseInt(parts[1], 10);
+                      m = parseInt(parts[0], 10);
+                  }
+              }
+              return d === todayDay && m === todayMonth && y === todayYear;
+          }
+          return false;
+      });
+
+      const activeUsersCount = new Set(todayData.map(item => item.email)).size;
 
       appStats = {
         total: appData.length,
         activeUsers: activeUsersCount,
-        latestDate: latestDateStr,
+        latestDate: todayLabelStr,
         statusData: formatToChartData(countOccurrences('status')),
         affiliationData: formatToChartData(countOccurrences('affiliation')),
         durationData: formatToChartData(countOccurrences('duration')),
@@ -656,9 +678,7 @@
         document.getElementById('ov-faculties').innerText = appStats.affiliationData.length;
         document.getElementById('ov-top-tool').innerText = appStats.toolsData.length > 0 ? appStats.toolsData[0].name : '-';
         
-        // อัปเดตตัวเลข Active Users
         document.getElementById('ov-active').innerText = appStats.activeUsers;
-        // อัปเดต Label เพื่อแสดงวันที่ชัดเจน
         if(appStats.latestDate) {
            document.getElementById('active-users-label').innerText = `Active Users (${appStats.latestDate})`;
         }
