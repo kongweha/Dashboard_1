@@ -33,6 +33,17 @@
       from { opacity: 0; transform: translateY(5px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    
+    /* สไตล์สำหรับ Dropdown */
+    select {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.7rem center;
+      background-size: 1em;
+    }
   </style>
 </head>
 <body class="bg-[#F8FAFC] text-slate-800 font-sans overflow-hidden flex h-screen">
@@ -148,9 +159,19 @@
             </div>
             
             <div class="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm xl:col-span-2 flex flex-col">
-              <div class="mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
-                <i data-lucide="bar-chart" class="w-5 h-5 text-blue-600"></i>
-                <h3 class="text-xl font-bold text-slate-800">Popular AI Tools</h3>
+              <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 gap-4">
+                <div class="flex items-center gap-2 shrink-0">
+                  <i data-lucide="bar-chart" class="w-5 h-5 text-blue-600"></i>
+                  <h3 class="text-xl font-bold text-slate-800">Popular AI Tools</h3>
+                </div>
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                   <select id="filter-role" onchange="updateToolsChart()" class="w-full sm:w-48 bg-white border-2 border-blue-100 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 p-2.5 outline-none cursor-pointer shadow-sm hover:border-blue-300 transition-colors font-medium">
+                     <option value="All">All</option>
+                   </select>
+                   <select id="filter-faculty" onchange="updateToolsChart()" class="w-full sm:w-48 bg-white border-2 border-blue-100 text-slate-700 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 p-2.5 outline-none cursor-pointer shadow-sm hover:border-blue-300 transition-colors font-medium">
+                     <option value="All">All</option>
+                   </select>
+                </div>
               </div>
               <div class="relative flex-1 w-full min-h-[300px]">
                 <canvas id="overviewToolsChart"></canvas>
@@ -314,6 +335,9 @@
     Chart.defaults.font.family = "'Inter', 'Prompt', sans-serif";
     Chart.defaults.color = '#475569';
 
+    // Global cleanText function for filtering
+    const cleanTextGlobal = (text) => text ? text.split(' (')[0].trim() : 'ไม่ระบุ';
+
     document.addEventListener("DOMContentLoaded", () => {
       renderMenus();
       lucide.createIcons();
@@ -370,7 +394,6 @@
       const activeEl = document.getElementById(`tab-${tabId}`);
       if(activeEl) {
          activeEl.classList.remove('hidden'); 
-         // ให้เปิดแสดงผลเป็น grid ทุกหน้าเพื่อให้ Responsive ทำงานได้สมบูรณ์
          activeEl.classList.add('grid');
       }
 
@@ -428,6 +451,7 @@
         })).filter(item => item.timestamp && item.timestamp.trim() !== '');
 
         calculateStats();
+        populateFilters(); // อัปเดต Dropdown หลังจากดึงข้อมูล
 
         document.getElementById('last-updated').innerText = new Date().toLocaleTimeString('th-TH');
         document.getElementById('loading-state').classList.add('hidden');
@@ -446,17 +470,15 @@
     }
 
     function calculateStats() {
-      const cleanText = (text) => text ? text.split(' (')[0].trim() : 'ไม่ระบุ';
-
       const countOccurrences = (key) => appData.reduce((acc, curr) => {
-        const val = cleanText(curr[key]);
+        const val = cleanTextGlobal(curr[key]);
         acc[val] = (acc[val] || 0) + 1;
         return acc;
       }, {});
 
       const countMultipleValues = (key) => appData.reduce((acc, curr) => {
         if (!curr[key]) return acc;
-        const items = curr[key].split(',').map(i => cleanText(i)).filter(i => i && i !== '-');
+        const items = curr[key].split(',').map(i => cleanTextGlobal(i)).filter(i => i && i !== '-');
         items.forEach(item => { acc[item] = (acc[item] || 0) + 1; });
         return acc;
       }, {});
@@ -470,7 +492,7 @@
       appData.forEach(item => {
         if (!item.tools || !item.purpose) return;
         const tools = item.tools.split(',').map(t => t.trim()).filter(t => t);
-        const purposes = item.purpose.split(',').map(p => cleanText(p)).filter(p => p);
+        const purposes = item.purpose.split(',').map(p => cleanTextGlobal(p)).filter(p => p);
         
         purposes.forEach(p => {
           if (!relationshipMatrix[p]) relationshipMatrix[p] = {};
@@ -488,10 +510,9 @@
       });
 
       const feedbacks = appData
-        .map(item => ({ time: item.timestamp, text: item.feedback, status: cleanText(item.status) }))
+        .map(item => ({ time: item.timestamp, text: item.feedback, status: cleanTextGlobal(item.status) }))
         .filter(item => item.text && item.text.trim().length > 1 && item.text.trim() !== '-');
 
-      // นับ Active Users จาก Email ที่ไม่ซ้ำกัน
       const uniqueEmails = new Set(appData.map(item => item.email)).size;
 
       appStats = {
@@ -510,6 +531,77 @@
       };
     }
 
+    // --- ฟังก์ชันสร้าง Dropdown Filter Options ---
+    function populateFilters() {
+      const roleSelect = document.getElementById('filter-role');
+      const facultySelect = document.getElementById('filter-faculty');
+
+      // ล้างข้อมูลเดิมและเก็บแค่ค่า "All" ไว้ (index 0)
+      roleSelect.length = 1;
+      facultySelect.length = 1;
+
+      // เติม Roles
+      appStats.statusData.forEach(s => {
+        let opt = document.createElement('option');
+        opt.value = s.name;
+        opt.innerHTML = s.name;
+        roleSelect.appendChild(opt);
+      });
+
+      // เติม Faculties (Affiliation)
+      appStats.affiliationData.forEach(f => {
+        let opt = document.createElement('option');
+        opt.value = f.name;
+        opt.innerHTML = f.name;
+        facultySelect.appendChild(opt);
+      });
+    }
+
+    // --- ฟังก์ชันอัปเดตกราฟ AI Tools จาก Filter ---
+    window.updateToolsChart = function() {
+      const selectedRole = document.getElementById('filter-role').value;
+      const selectedFaculty = document.getElementById('filter-faculty').value;
+
+      // กรอง appData ตามเงื่อนไข Dropdown
+      let filteredData = appData.filter(item => {
+        const cleanStatus = cleanTextGlobal(item.status);
+        const cleanFaculty = cleanTextGlobal(item.affiliation);
+
+        const matchRole = (selectedRole === 'All' || cleanStatus === selectedRole);
+        const matchFaculty = (selectedFaculty === 'All' || cleanFaculty === selectedFaculty);
+
+        return matchRole && matchFaculty;
+      });
+
+      // สร้างข้อมูล Tools ใหม่จากข้อมูลที่ถูกกรองแล้ว
+      const toolsCount = filteredData.reduce((acc, curr) => {
+        if (!curr.tools) return acc;
+        const items = curr.tools.split(',').map(i => cleanTextGlobal(i)).filter(i => i && i !== '-');
+        items.forEach(item => { acc[item] = (acc[item] || 0) + 1; });
+        return acc;
+      }, {});
+
+      const newToolsData = Object.entries(toolsCount)
+         .map(([name, value]) => ({ name, value }))
+         .sort((a, b) => b.value - a.value);
+
+      // นำข้อมูลที่ได้มาระบายลงกราฟเดิม
+      const barOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } };
+      
+      // อัปเดต Data Labels (ถ้าข้อมูลไม่มีให้โชว์ว่า "No Data")
+      const chartLabels = newToolsData.length > 0 ? newToolsData.map(d => d.name) : ['No Data'];
+      const chartData = newToolsData.length > 0 ? newToolsData.map(d => d.value) : [0];
+
+      renderChart('overviewToolsChart', 'bar', {
+        labels: chartLabels,
+        datasets: [{ 
+           data: chartData, 
+           backgroundColor: '#6366F1', // โทนสีม่วง/น้ำเงิน
+           borderRadius: 4
+        }]
+      }, { ...barOptions, indexAxis: 'y' });
+    }
+
     const truncateText = (text, maxLength = 25) => text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
 
     function renderChart(canvasId, type, data, options) {
@@ -518,10 +610,8 @@
       chartInstances[canvasId] = new Chart(ctx, { type, data, options });
     }
 
-    // ฟังก์ชันช่วยสุ่มสีพาสเทลสำหรับ Role Badge ในตาราง
     function getRoleBadgeStyle(role) {
        const colors = ['bg-purple-50 text-purple-700 border-purple-100', 'bg-blue-50 text-blue-700 border-blue-100', 'bg-amber-50 text-amber-700 border-amber-100', 'bg-emerald-50 text-emerald-700 border-emerald-100', 'bg-rose-50 text-rose-700 border-rose-100'];
-       // ใช้ความยาวตัวอักษรเพื่อ Fix สีให้คงที่สำหรับแต่ละ Role
        const idx = role.length % colors.length;
        return colors[idx];
     }
@@ -533,13 +623,11 @@
       const barOptions = { ...commonOptions, plugins: { legend: { display: false } } };
 
       if (tabId === 'overview') {
-        // อัปเดต Summary Cards 4 ใบ บนสุด
         document.getElementById('ov-total').innerText = appStats.total;
         document.getElementById('ov-faculties').innerText = appStats.affiliationData.length;
         document.getElementById('ov-top-tool').innerText = appStats.toolsData.length > 0 ? appStats.toolsData[0].name : '-';
         document.getElementById('ov-active').innerText = appStats.activeUsers;
         
-        // อัปเดตกราฟ User Roles (Doughnut Chart)
         renderChart('overviewRoleChart', 'doughnut', {
           labels: appStats.statusData.map(d => d.name),
           datasets: [{ 
@@ -550,26 +638,16 @@
           }]
         }, { ...commonOptions, cutout: '65%', plugins: { legend: { position: window.innerWidth < 768 ? 'bottom' : 'right', labels: { boxWidth: 12, padding: 15 } } } });
 
-        // อัปเดตกราฟ Popular AI Tools (Horizontal Bar Chart)
-        renderChart('overviewToolsChart', 'bar', {
-          labels: appStats.toolsData.map(d => d.name),
-          datasets: [{ 
-             data: appStats.toolsData.map(d => d.value), 
-             backgroundColor: '#6366F1', // ใช้สีโทนม่วง/น้ำเงินตามรูปตัวอย่าง
-             borderRadius: 4
-          }]
-        }, { ...barOptions, indexAxis: 'y' });
+        // เรียกอัปเดต Tools Chart ทันทีโดยยึดตามค่า Dropdown ปัจจุบัน
+        updateToolsChart();
 
-        // อัปเดตตาราง Recent Activity Log (ดึงมา 10 รายการล่าสุด)
         const tbody = document.getElementById('recent-activity-tbody');
         document.getElementById('ov-showing-records').innerText = `SHOWING ${appStats.total} RECORDS`;
         
-        // กลับด้านข้อมูลเพื่อให้รายการล่าสุดอยู่บนสุด แล้วดึงมา 10 รายการ
         const recentData = [...appData].reverse().slice(0, 10);
         let tableHtml = '';
         
         recentData.forEach(row => {
-          // สร้าง Tag เครื่องมือ AI
           const toolsList = row.tools ? row.tools.split(',').filter(t => t.trim()) : [];
           let toolsHtml = '';
           toolsList.slice(0, 3).forEach(t => {
