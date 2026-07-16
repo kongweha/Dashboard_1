@@ -82,10 +82,17 @@
         return new Date(yearCE, month, day);
     }
 
+    // คำนวณว่าวันที่นั้นตกอยู่ในสัปดาห์ที่เท่าไหร่ของเดือน
     function getWeekOfMonth(date) {
         const firstDate = new Date(date.getFullYear(), date.getMonth(), 1);
         const firstDay = firstDate.getDay();
         return Math.ceil((date.getDate() + firstDay - 1) / 7);
+    }
+
+    // คำนวณว่าเดือนนั้นๆ มีทั้งหมดกี่สัปดาห์ (เพื่อใช้วาดคอลัมน์ให้ครบ)
+    function getWeeksInMonth(year, monthIndex) {
+        const lastDate = new Date(year, monthIndex + 1, 0); // หาวันสุดท้ายของเดือนนั้น
+        return getWeekOfMonth(lastDate);
     }
 
     document.getElementById('csvFile').addEventListener('change', function(e) {
@@ -120,7 +127,6 @@
             const dayOfWeek = dateObj.getDay();
             if (dayOfWeek < 1 || dayOfWeek > 5) return;
 
-            // สร้าง Value ของเดือนสำหรับนำไปใช้เปรียบเทียบเรียงลำดับ (เช่น 202606)
             const monthVal = dateObj.getFullYear() * 100 + dateObj.getMonth();
             const monthStr = fullMonths[dateObj.getMonth()] + " " + (dateObj.getFullYear() + 543);
             const weekNum = getWeekOfMonth(dateObj);
@@ -139,7 +145,6 @@
             });
         });
 
-        // นำเดือนมาเรียงตามลำดับเวลา
         availableMonths = Array.from(monthSet.values()).sort((a, b) => a.val - b.val);
 
         setupFilters();
@@ -164,7 +169,6 @@
             endSelect.innerHTML += `<option value="${m.val}">${m.str}</option>`;
         });
 
-        // ค่าเริ่มต้น: ให้ End Month เป็นเดือนล่าสุด
         if (availableMonths.length > 0) {
             endSelect.value = availableMonths[availableMonths.length - 1].val;
             startSelect.value = availableMonths[0].val;
@@ -182,14 +186,12 @@
         let startVal = parseInt(document.getElementById('filterStartMonth').value);
         let endVal = parseInt(document.getElementById('filterEndMonth').value);
 
-        // สลับค่าถ้าผู้ใช้เลือกเดือนเริ่มต้น มากกว่า เดือนสิ้นสุด
         if (startVal > endVal) {
             const temp = startVal;
             startVal = endVal;
             endVal = temp;
         }
 
-        // กรองข้อมูลตามที่เลือก
         const filteredData = globalData.filter(item => {
             const matchName = (selectedName === "all" || item.name === selectedName);
             const matchMonth = (item.monthVal >= startVal && item.monthVal <= endVal);
@@ -200,17 +202,24 @@
     }
 
     function buildDynamicTable(filteredData) {
-        // 1. หาโครงสร้างหัวตาราง: เดือนอะไรบ้างที่มีข้อมูล และแต่ละเดือนมีสัปดาห์ที่เท่าไหร่บ้าง
         const tableStructure = {}; 
         
+        // สร้างโครงสร้างเดือน และสร้างสัปดาห์ให้ "ครบทุกสัปดาห์ในเดือนนั้น"
         filteredData.forEach(item => {
             if (!tableStructure[item.monthVal]) {
-                tableStructure[item.monthVal] = { monthStr: item.monthStr, weeks: new Set() };
+                const yearCE = Math.floor(item.monthVal / 100);
+                const monthIdx = item.monthVal % 100;
+                const maxWeeks = getWeeksInMonth(yearCE, monthIdx); // หาจำนวนสัปดาห์ทั้งหมดของเดือน
+                
+                const allWeeks = new Set();
+                for(let i = 1; i <= maxWeeks; i++) {
+                    allWeeks.add(i); // เพิ่มสัปดาห์ที่ 1 ถึงสัปดาห์สุดท้ายให้ครบ
+                }
+                
+                tableStructure[item.monthVal] = { monthStr: item.monthStr, weeks: allWeeks };
             }
-            tableStructure[item.monthVal].weeks.add(item.week);
         });
 
-        // แปลงเป็น Array และเรียงลำดับคอลัมน์ (เดือน และ สัปดาห์)
         const columns = Object.keys(tableStructure)
             .map(val => parseInt(val))
             .sort((a, b) => a - b)
@@ -222,7 +231,6 @@
                 };
             });
 
-        // 2. จัดกลุ่มผลรวมการตรวจ
         const grouped = {};
         filteredData.forEach(item => {
             const rowKey = `${item.name}|${item.db}`;
@@ -251,7 +259,6 @@
             return;
         }
 
-        // สร้าง Thead แถวที่ 1 (ชื่อ, ฐาน, เดือน..., รวม)
         let tr1 = `<tr>
             <th rowspan="2" style="min-width: 150px;">ชื่อผู้ตรวจ</th>
             <th rowspan="2" style="min-width: 200px;">ฐานที่ตรวจ</th>`;
@@ -262,35 +269,31 @@
         
         tr1 += `<th rowspan="2" class="bg-warning">รวมทั้งหมด</th></tr>`;
 
-        // สร้าง Thead แถวที่ 2 (สัปดาห์ 1, 2, 3...)
         let tr2 = `<tr>`;
         columns.forEach(col => {
             col.weeks.forEach(w => {
-                tr2 += `<th class="bg-light">สัปดาห์ ${w}</th>`;
+                tr2 += `<th class="bg-light" style="min-width: 80px;">สัปดาห์ ${w}</th>`;
             });
         });
         tr2 += `</tr>`;
 
         thead.innerHTML = tr1 + tr2;
 
-        // สร้าง Tbody
         for (const key in grouped) {
             const row = grouped[key];
             let tr = `<tr>
                 <td class="text-start-td">${row.name}</td>
                 <td class="text-start-td">${row.db}</td>`;
             
-            // วนลูปสร้างเซลล์ตามคอลัมน์ที่มี
             columns.forEach(col => {
                 col.weeks.forEach(w => {
                     const cellKey = `${col.monthVal}|${w}`;
-                    const count = row.counts[cellKey] || '-';
-                    const textClass = count !== '-' ? 'text-primary fw-bold' : 'text-muted';
+                    const count = row.counts[cellKey] || 0; // แสดงเป็น 0 ถ้าไม่มีข้อมูล
+                    const textClass = count > 0 ? 'text-primary fw-bold' : 'text-muted';
                     tr += `<td class="${textClass}">${count}</td>`;
                 });
             });
 
-            // คอลัมน์รวม
             tr += `<td class="bg-warning text-dark fw-bold">${row.total}</td></tr>`;
             tbody.innerHTML += tr;
         }
