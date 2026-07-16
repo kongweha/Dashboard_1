@@ -3,193 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Usage Dashboard</title>
+    <title>ระบบรายงานฐานข้อมูล (HTML Parser)</title>
     <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --primary-color: #db2777; /* โทนสีชมพู (อิงตามสีจุฬาฯ) */
-            --primary-hover: #be185d;
-            --bg-color: #f1f5f9;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-        }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body {
-            font-family: 'Prompt', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            padding: 2rem;
-        }
-
+        :root { --primary: #db2777; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --border: #e2e8f0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding: 20px; }
         .container { max-width: 1200px; margin: 0 auto; }
-
-        .header {
-            margin-bottom: 2rem;
-            text-align: center;
-        }
+        h2 { text-align: center; margin-bottom: 20px; color: var(--primary); }
         
-        .header h1 { font-size: 1.8rem; color: var(--text-main); font-weight: 600; }
-        .header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.5rem; }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            border: 1px solid var(--border-color);
-        }
-
-        /* ส่วนนำเข้าข้อมูล */
-        .import-section {
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-            background: #fdf2f8;
-            border: 1px dashed var(--primary-color);
-        }
-
-        .import-section input[type="text"] {
-            flex: 1;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 0.9rem;
-        }
-
-        /* ส่วนตัวกรอง (Filters) */
-        .filters {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
-        .input-group label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
-        .input-group select, .input-group input {
-            padding: 0.6rem 0.8rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-family: inherit;
-            outline: none;
-            transition: all 0.2s;
-        }
-        .input-group select:focus, .input-group input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.1); }
-
-        button {
-            padding: 0.6rem 1.2rem;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-family: inherit;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        button:hover { background-color: var(--primary-hover); }
-
-        /* ส่วนตาราง */
-        .table-wrapper {
-            width: 100%;
-            overflow-x: auto;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.9rem;
-            white-space: nowrap;
-        }
-
-        th, td {
-            padding: 0.75rem 1rem;
-            text-align: center;
-            border-bottom: 1px solid var(--border-color);
-            border-right: 1px solid var(--border-color);
-        }
-
-        th {
-            background-color: #f8fafc;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        tbody tr:hover { background-color: #f8fafc; }
-        .text-left { text-align: left; }
+        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         
-        .badge {
-            display: inline-block;
-            padding: 0.2rem 0.6rem;
-            background-color: #e2e8f0;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 0.3rem;
-        }
+        /* กล่องวางโค้ด HTML */
+        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 12px; margin-bottom: 10px; resize: vertical; }
+        button.btn-main { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; font-size: 16px; }
+        button.btn-main:hover { background: #be185d; }
 
-        /* ตรึงคอลัมน์ (Sticky) */
-        thead th:nth-child(1), thead th:nth-child(2) { position: sticky; left: 0; z-index: 3; background-color: #f8fafc; }
-        tbody td:nth-child(1), tbody td:nth-child(2) { position: sticky; left: 0; z-index: 1; background-color: white; }
-        thead th:nth-child(2), tbody td:nth-child(2) { left: 60px; box-shadow: inset -1px 0 0 var(--border-color); }
-        thead tr:nth-child(1) th { position: sticky; top: 0; z-index: 4; }
-        thead tr:nth-child(2) th { position: sticky; top: 43px; z-index: 2; }
-        thead tr:nth-child(1) th:nth-child(1), thead tr:nth-child(1) th:nth-child(2) { z-index: 5; }
-
-        .empty-state { padding: 3rem; text-align: center; color: var(--text-muted); }
+        /* ตัวกรอง */
+        .filters { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
+        .filter-group label { font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 5px; }
+        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none; }
+        
+        /* ตาราง */
+        .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; max-height: 60vh; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+        th, td { padding: 10px; border: 1px solid var(--border); text-align: center; }
+        th { background: #f1f5f9; position: sticky; top: 0; z-index: 2; }
+        td.text-left { text-align: left; position: sticky; left: 0; background: white; z-index: 1; }
+        th.sticky-col { position: sticky; left: 0; z-index: 3; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <div class="header">
-            <h1>ระบบรายงานการใช้งานฐานข้อมูล</h1>
-            <p>Database Usage Analytics Dashboard</p>
+        <h2>📊 ดึงข้อมูลจาก View-Source</h2>
+        
+        <div class="card">
+            <label style="font-weight: bold; font-size: 14px;">1. วางโค้ด HTML ที่ก๊อปปี้มาจากหน้า view-source ลงในช่องนี้</label>
+            <textarea id="html-input" placeholder="<html lang='th'>... วางโค้ดทั้งหมดที่นี่ ...</html>"></textarea>
+            <button class="btn-main" onclick="processHTML()">🔄 แปลงข้อมูลเป็นตาราง</button>
         </div>
 
-        <div class="card import-section">
-            <div style="flex-shrink: 0;">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+        <div class="card" id="dashboard-section" style="display: none; padding: 0;">
+            <div style="padding: 20px; border-bottom: 1px solid var(--border);">
+                <div class="filters">
+                    <div class="filter-group">
+                        <label>ค้นหาชื่อฐานข้อมูล</label>
+                        <input type="text" id="filter-db" placeholder="พิมพ์ชื่อฐานข้อมูล..." onkeyup="renderTable()">
+                    </div>
+                </div>
             </div>
-            <input type="text" id="json-input" placeholder="วางโค้ดข้อมูล (JSON) ที่คัดลอกจาก Console ลงที่นี่...">
-            <button onclick="loadImportedData()">โหลดข้อมูล</button>
-            <button onclick="loadMockData()" style="background-color: #64748b;">ดูตัวอย่าง</button>
-        </div>
-
-        <div class="card filters">
-            <div class="input-group">
-                <label>ปี (ค.ศ.)</label>
-                <select id="filter-year" onchange="onYearChange()"></select>
-            </div>
-            <div class="input-group">
-                <label>เดือน</label>
-                <select id="filter-month">
-                    <option value="">-- แสดงทุกเดือน --</option>
-                </select>
-            </div>
-            <div class="input-group">
-                <label>ค้นหาฐานข้อมูล</label>
-                <input type="text" id="filter-db" placeholder="ชื่อฐานข้อมูล...">
-            </div>
-            <div class="input-group">
-                <label>ผู้รับผิดชอบ</label>
-                <input type="text" id="filter-person" placeholder="ชื่อผู้รับผิดชอบ...">
-            </div>
-            <div class="input-group" style="justify-content: flex-end;">
-                <button onclick="applyFilters()">🔍 ค้นหา</button>
-            </div>
-        </div>
-
-        <div class="card" style="padding: 0; overflow: hidden;">
-            <div class="table-wrapper">
-                <table id="main-table">
+            
+            <div class="table-responsive">
+                <table>
                     <thead id="table-head"></thead>
                     <tbody id="table-body"></tbody>
                 </table>
@@ -198,138 +65,97 @@
     </div>
 
     <script>
-        // โค้ด JavaScript สำหรับควบคุมการทำงาน (ใช้ลอจิกปฏิทินจริง)
-        const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-        let timeline = {};
         let rawData = [];
-        let filteredData = [];
+        let headers = [];
 
-        function initYearDropdown() {
-            const currentYear = new Date().getFullYear();
-            const yearSelect = document.getElementById('filter-year');
-            yearSelect.innerHTML = '';
-            for (let y = currentYear - 3; y <= currentYear + 1; y++) {
-                let option = document.createElement('option');
-                option.value = y; option.text = y;
-                if (y === currentYear) option.selected = true;
-                yearSelect.appendChild(option);
-            }
-        }
-
-        function generateTimelineByYear(year) {
-            let newTimeline = {};
-            let currentDate = new Date(year, 0, 1);
-            let dayOfWeek = currentDate.getDay(); 
-            let diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-            currentDate = new Date(currentDate.setDate(diff));
-
-            while (currentDate.getFullYear() <= year) {
-                let startDay = currentDate.getDate();
-                let fridayDate = new Date(currentDate); fridayDate.setDate(currentDate.getDate() + 4);
-                let endDay = fridayDate.getDate();
-                let thursdayDate = new Date(currentDate); thursdayDate.setDate(currentDate.getDate() + 3);
-                
-                if (thursdayDate.getFullYear() === parseInt(year)) {
-                    let monthName = monthNames[thursdayDate.getMonth()];
-                    if (!newTimeline[monthName]) newTimeline[monthName] = [];
-                    newTimeline[monthName].push(`${startDay}-${endDay}`);
-                }
-                currentDate.setDate(currentDate.getDate() + 7);
-            }
-            return newTimeline;
-        }
-
-        function updateMonthDropdown() {
-            const monthSelect = document.getElementById('filter-month');
-            monthSelect.innerHTML = '<option value="">-- แสดงทุกเดือน --</option>';
-            for (const month of monthNames) {
-                if (timeline[month]) monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
-            }
-        }
-
-        function renderTable() {
-            const thead = document.getElementById('table-head');
-            const tbody = document.getElementById('table-body');
-            thead.innerHTML = ''; tbody.innerHTML = '';
-
-            const selectedMonth = document.getElementById('filter-month').value;
-            let activeMonths = selectedMonth ? { [selectedMonth]: timeline[selectedMonth] } : timeline;
-
-            let trHeader1 = document.createElement('tr');
-            let trHeader2 = document.createElement('tr');
-            trHeader1.innerHTML = `<th rowspan="2" style="width: 60px;">ลำดับ</th><th rowspan="2" style="width: 280px;">ฐานข้อมูล</th>`;
-
-            for (const [month, weeks] of Object.entries(activeMonths)) {
-                if(!weeks) continue;
-                trHeader1.innerHTML += `<th colspan="${weeks.length}">${month}</th>`;
-                weeks.forEach(week => { trHeader2.innerHTML += `<th>${week}</th>`; });
-            }
-            thead.appendChild(trHeader1); thead.appendChild(trHeader2);
-
-            if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="100%"><div class="empty-state">กรุณานำเข้าข้อมูล หรือ ไม่พบข้อมูลที่ค้นหา</div></td></tr>`;
+        function processHTML() {
+            const htmlString = document.getElementById('html-input').value;
+            if (!htmlString.trim()) {
+                alert("กรุณาวางโค้ด HTML ก่อนครับ");
                 return;
             }
 
+            // ใช้ DOMParser เพื่อแปลง String เป็นโครงสร้าง HTML (Virtual DOM)
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlString, 'text/html');
+            
+            // หาตารางทั้งหมด (สมมติว่าตารางข้อมูลคือตารางแรกหรือตารางหลัก)
+            const tables = doc.querySelectorAll('table');
+            if (tables.length === 0) {
+                alert("ไม่พบแท็ก <table> ในโค้ด HTML ที่วางครับ");
+                return;
+            }
+
+            // เลือกตารางที่น่าจะเป็นข้อมูลที่สุด (มักจะเป็นตารางที่ใหญ่ที่สุด)
+            let targetTable = tables[0]; 
+            const rows = targetTable.querySelectorAll('tr');
+
+            if (rows.length < 2) {
+                alert("ตารางนี้ไม่มีข้อมูล หรือโครงสร้างไม่ถูกต้อง");
+                return;
+            }
+
+            rawData = [];
+            headers = [];
+
+            // แกะ Header (สมมติว่าอยู่บรรทัดที่ 1 และ 2)
+            // หมายเหตุ: โค้ดส่วนนี้เป็นการอ่าน <th> แบบง่ายๆ หาก Header ซับซ้อนมาก (มี colspan/rowspan เยอะ) อาจต้องปรับแก้
+            let headerCells = rows[0].querySelectorAll('th, td');
+            headerCells.forEach(cell => headers.push(cell.innerText.trim()));
+
+            // แกะข้อมูล (วนลูปตั้งแต่บรรทัดที่เป็นข้อมูล สมมติว่าเริ่มที่ index 2)
+            for (let i = 2; i < rows.length; i++) {
+                let cols = rows[i].querySelectorAll('td');
+                if (cols.length > 2) {
+                    let rowValues = [];
+                    cols.forEach(col => rowValues.push(col.innerText.trim()));
+                    
+                    rawData.push({
+                        id: i, // ลำดับ
+                        dbName: rowValues[1] || "ไม่ระบุ", // สมมติว่าชื่อฐานข้อมูลอยู่คอลัมน์ 2 (index 1)
+                        values: rowValues
+                    });
+                }
+            }
+
+            document.getElementById('dashboard-section').style.display = 'block';
+            renderTable();
+            alert("ดึงข้อมูลสำเร็จ! พบข้อมูล " + rawData.length + " รายการ");
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('table-body');
+            const thead = document.getElementById('table-head');
+            const filterDb = document.getElementById('filter-db').value.toLowerCase();
+            
+            tbody.innerHTML = '';
+            thead.innerHTML = '';
+
+            // สร้าง Header (แบบพื้นฐาน)
+            let trHead = document.createElement('tr');
+            trHead.innerHTML = `<th class="sticky-col">ลำดับ</th><th class="sticky-col" style="left: 60px;">ชื่อฐานข้อมูล</th>`;
+            
+            // หากตารางจริงมีคอลัมน์สถิติ เริ่มจากคอลัมน์ที่ 3 เป็นต้นไป (index 2)
+            for (let i = 2; i < (rawData[0]?.values.length || 10); i++) {
+                trHead.innerHTML += `<th>ข้อมูลคอลัมน์ ${i+1}</th>`; 
+            }
+            thead.appendChild(trHead);
+
+            // กรองและสร้าง Body
+            const filteredData = rawData.filter(item => item.dbName.toLowerCase().includes(filterDb));
+
             filteredData.forEach((row, index) => {
                 let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${index + 1}</td>
-                    <td class="text-left">
-                        <strong style="color: var(--primary-color);">${row.dbName}</strong><br>
-                        <span class="badge">👨‍💼 ${row.person || 'ไม่ระบุ'}</span>
-                    </td>`;
-                for (const [month, weeks] of Object.entries(activeMonths)) {
-                    if(!weeks) continue;
-                    weeks.forEach(week => {
-                        let val = (row.data[month] && row.data[month][week] !== undefined) ? row.data[month][week] : "-";
-                        tr.innerHTML += `<td>${val === 0 ? '<span style="color:#cbd5e1;">0</span>' : val}</td>`;
-                    });
+                tr.innerHTML = `<td class="text-left">${index + 1}</td><td class="text-left" style="left: 60px; font-weight: bold; color: var(--primary);">${row.dbName}</td>`;
+                
+                // ใส่ตัวเลขสถิติ (เริ่มจากคอลัมน์ที่ 3)
+                for (let i = 2; i < row.values.length; i++) {
+                    let val = row.values[i];
+                    tr.innerHTML += `<td>${val === '0' || !val ? '<span style="color:#cbd5e1;">0</span>' : val}</td>`;
                 }
                 tbody.appendChild(tr);
             });
         }
-
-        function applyFilters() {
-            const dbKeyword = document.getElementById('filter-db').value.toLowerCase();
-            const personKeyword = document.getElementById('filter-person').value.toLowerCase();
-            filteredData = rawData.filter(item => item.dbName.toLowerCase().includes(dbKeyword) && (item.person || '').toLowerCase().includes(personKeyword));
-            renderTable();
-        }
-
-        function onYearChange() {
-            const selectedYear = document.getElementById('filter-year').value;
-            timeline = generateTimelineByYear(selectedYear);
-            updateMonthDropdown();
-            applyFilters();
-        }
-
-        // ระบบโหลดข้อมูล
-        function loadImportedData() {
-            try {
-                const input = document.getElementById('json-input').value;
-                rawData = JSON.parse(input);
-                applyFilters();
-                alert('โหลดข้อมูลสำเร็จ!');
-            } catch (e) {
-                alert('รูปแบบข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูล JSON อีกครั้ง');
-            }
-        }
-
-        function loadMockData() {
-            const dbList = [{ name: "Business Source Complete", person: "สมชาย" }, { name: "Emerald Management", person: "สมศรี" }];
-            rawData = dbList.map((db, i) => {
-                let row = { id: i + 1, dbName: db.name, person: db.person, data: {} };
-                for (const [month, weeks] of Object.entries(timeline)) {
-                    row.data[month] = {};
-                    weeks.forEach(week => row.data[month][week] = Math.floor(Math.random() * 5));
-                }
-                return row;
-            });
-            applyFilters();
-        }
-
-        window.onload = () => { initYearDropdown(); onYearChange(); };
     </script>
 </body>
 </html>
