@@ -22,9 +22,13 @@
 <div class="container-fluid">
     <h3 class="mb-4 text-primary text-center">ระบบสรุปผลการตรวจฐานข้อมูล</h3>
     
-    <div class="mb-4 col-md-6 mx-auto">
-        <label for="csvFile" class="form-label fw-bold">อัปโหลดไฟล์ (.csv)</label>
-        <input type="file" id="csvFile" accept=".csv" class="form-control">
+    <div class="mb-4 col-md-6 mx-auto text-center">
+        <label for="csvFile" class="form-label fw-bold d-block text-start">อัปโหลดไฟล์ (.csv)</label>
+        <div class="input-group">
+            <input type="file" id="csvFile" accept=".csv" class="form-control">
+            <button class="btn btn-outline-danger" type="button" id="clearDataBtn" style="display: none;">ล้างข้อมูลที่จำไว้</button>
+        </div>
+        <small class="text-muted text-start d-block mt-1">* ระบบจะจดจำไฟล์ล่าสุดไว้จนกว่าจะอัปโหลดใหม่ หรือกดล้างข้อมูล</small>
     </div>
 
     <div class="filter-box mx-auto" id="filterSection" style="display: none; max-width: 900px;">
@@ -48,10 +52,8 @@
 
     <div class="table-responsive" id="tableContainer" style="display:none;">
         <table class="table table-bordered table-striped table-hover m-0">
-            <thead id="resultHead">
-                </thead>
-            <tbody id="resultBody">
-                </tbody>
+            <thead id="resultHead"></thead>
+            <tbody id="resultBody"></tbody>
         </table>
     </div>
 </div>
@@ -59,13 +61,55 @@
 <script>
     let globalData = [];
     let uniqueNames = new Set();
-    let availableMonths = []; // เก็บเดือนทั้งหมดที่พบเรียงตามเวลา
+    let availableMonths = []; 
 
     const thaiMonths = {
         "ม.ค.":0, "ก.พ.":1, "มี.ค.":2, "เม.ย.":3, "พ.ค.":4, "มิ.ย.":5,
         "ก.ค.":6, "ส.ค.":7, "ก.ย.":8, "ต.ค.":9, "พ.ย.":10, "ธ.ค.":11
     };
     const fullMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+    // ทำงานทันทีเมื่อโหลดหน้าเว็บ
+    document.addEventListener("DOMContentLoaded", function() {
+        const savedData = localStorage.getItem('dcheck_saved_csv');
+        if (savedData) {
+            try {
+                const parsedData = JSON.parse(savedData);
+                processRawData(parsedData);
+                document.getElementById('clearDataBtn').style.display = 'block';
+            } catch (e) {
+                console.error("ไม่สามารถอ่านข้อมูลที่บันทึกไว้ได้");
+            }
+        }
+    });
+
+    document.getElementById('csvFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                // บันทึกข้อมูลลง localStorage
+                try {
+                    localStorage.setItem('dcheck_saved_csv', JSON.stringify(results.data));
+                    document.getElementById('clearDataBtn').style.display = 'block';
+                } catch (err) {
+                    alert("ไฟล์มีขนาดใหญ่เกินกว่าที่เบราว์เซอร์จะจำได้ ระบบจะแสดงผลอย่างเดียวแต่ไม่จำค่าเมื่อรีเฟรช");
+                }
+                processRawData(results.data);
+            }
+        });
+    });
+
+    // ปุ่มล้างข้อมูล
+    document.getElementById('clearDataBtn').addEventListener('click', function() {
+        if(confirm("คุณต้องการล้างข้อมูลที่ระบบจำไว้ใช่หรือไม่?")) {
+            localStorage.removeItem('dcheck_saved_csv');
+            location.reload(); // รีเฟรชหน้าจอใหม่
+        }
+    });
 
     function parseThaiDate(dateStr) {
         if (!dateStr) return null;
@@ -82,31 +126,16 @@
         return new Date(yearCE, month, day);
     }
 
-    // คำนวณว่าวันที่นั้นตกอยู่ในสัปดาห์ที่เท่าไหร่ของเดือน
     function getWeekOfMonth(date) {
         const firstDate = new Date(date.getFullYear(), date.getMonth(), 1);
         const firstDay = firstDate.getDay();
         return Math.ceil((date.getDate() + firstDay - 1) / 7);
     }
 
-    // คำนวณว่าเดือนนั้นๆ มีทั้งหมดกี่สัปดาห์ (เพื่อใช้วาดคอลัมน์ให้ครบ)
     function getWeeksInMonth(year, monthIndex) {
-        const lastDate = new Date(year, monthIndex + 1, 0); // หาวันสุดท้ายของเดือนนั้น
+        const lastDate = new Date(year, monthIndex + 1, 0); 
         return getWeekOfMonth(lastDate);
     }
-
-    document.getElementById('csvFile').addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            complete: function(results) {
-                processRawData(results.data);
-            }
-        });
-    });
 
     function processRawData(data) {
         globalData = [];
@@ -123,7 +152,6 @@
             const dateObj = parseThaiDate(dateStr);
             if (!dateObj) return;
 
-            // กรองเสาร์-อาทิตย์ออก นับเฉพาะ จันทร์-ศุกร์
             const dayOfWeek = dateObj.getDay();
             if (dayOfWeek < 1 || dayOfWeek > 5) return;
 
@@ -164,7 +192,7 @@
             nameSelect.innerHTML += `<option value="${name}">${name}</option>`;
         });
 
-        availableMonths.forEach((m, index) => {
+        availableMonths.forEach((m) => {
             startSelect.innerHTML += `<option value="${m.val}">${m.str}</option>`;
             endSelect.innerHTML += `<option value="${m.val}">${m.str}</option>`;
         });
@@ -204,16 +232,15 @@
     function buildDynamicTable(filteredData) {
         const tableStructure = {}; 
         
-        // สร้างโครงสร้างเดือน และสร้างสัปดาห์ให้ "ครบทุกสัปดาห์ในเดือนนั้น"
         filteredData.forEach(item => {
             if (!tableStructure[item.monthVal]) {
                 const yearCE = Math.floor(item.monthVal / 100);
                 const monthIdx = item.monthVal % 100;
-                const maxWeeks = getWeeksInMonth(yearCE, monthIdx); // หาจำนวนสัปดาห์ทั้งหมดของเดือน
+                const maxWeeks = getWeeksInMonth(yearCE, monthIdx); 
                 
                 const allWeeks = new Set();
                 for(let i = 1; i <= maxWeeks; i++) {
-                    allWeeks.add(i); // เพิ่มสัปดาห์ที่ 1 ถึงสัปดาห์สุดท้ายให้ครบ
+                    allWeeks.add(i); 
                 }
                 
                 tableStructure[item.monthVal] = { monthStr: item.monthStr, weeks: allWeeks };
@@ -288,7 +315,7 @@
             columns.forEach(col => {
                 col.weeks.forEach(w => {
                     const cellKey = `${col.monthVal}|${w}`;
-                    const count = row.counts[cellKey] || 0; // แสดงเป็น 0 ถ้าไม่มีข้อมูล
+                    const count = row.counts[cellKey] || 0; 
                     const textClass = count > 0 ? 'text-primary fw-bold' : 'text-muted';
                     tr += `<td class="${textClass}">${count}</td>`;
                 });
