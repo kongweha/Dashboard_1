@@ -11,6 +11,7 @@
         .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
         th { text-align: center; vertical-align: middle; background-color: #e9ecef !important; }
         td { vertical-align: middle; }
+        .filter-box { background-color: #f1f3f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -19,8 +20,25 @@
     <h3 class="mb-4 text-primary text-center">ระบบสรุปผลการตรวจฐานข้อมูล</h3>
     
     <div class="mb-4">
-        <label for="csvFile" class="form-label fw-bold">อัปโหลดไฟล์ที่โหลดมาจากระบบ (เลือกไฟล์ .csv)</label>
+        <label for="csvFile" class="form-label fw-bold">อัปโหลดไฟล์ (.csv)</label>
         <input type="file" id="csvFile" accept=".csv" class="form-control">
+    </div>
+
+    <div class="filter-box" id="filterSection" style="display: none;">
+        <div class="row">
+            <div class="col-md-6 mb-2">
+                <label class="fw-bold">ผู้ตรวจฐานข้อมูล:</label>
+                <select id="filterName" class="form-select">
+                    <option value="all">-- ทั้งหมด --</option>
+                </select>
+            </div>
+            <div class="col-md-6 mb-2">
+                <label class="fw-bold">เดือน:</label>
+                <select id="filterMonth" class="form-select">
+                    <option value="all">-- ทั้งหมด --</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <div class="table-responsive" id="tableContainer" style="display:none;">
@@ -30,16 +48,16 @@
                     <th rowspan="2">ชื่อผู้ตรวจ</th>
                     <th rowspan="2">ฐานที่ตรวจ</th>
                     <th rowspan="2">เดือน</th>
-                    <th rowspan="2">สัปดาห์ที่</th>
-                    <th colspan="5">จำนวนครั้ง (จันทร์ - ศุกร์)</th>
+                    <th colspan="6">จำนวนครั้ง (นับรวมต่อสัปดาห์)</th>
                     <th rowspan="2" class="bg-warning">รวมทั้งหมด</th>
                 </tr>
                 <tr>
-                    <th>จ.</th>
-                    <th>อ.</th>
-                    <th>พ.</th>
-                    <th>พฤ.</th>
-                    <th>ศ.</th>
+                    <th>สัปดาห์ 1</th>
+                    <th>สัปดาห์ 2</th>
+                    <th>สัปดาห์ 3</th>
+                    <th>สัปดาห์ 4</th>
+                    <th>สัปดาห์ 5</th>
+                    <th>สัปดาห์ 6</th>
                 </tr>
             </thead>
             <tbody id="resultBody"></tbody>
@@ -48,14 +66,17 @@
 </div>
 
 <script>
-    // สร้างแผนที่แปลเดือนภาษาไทยย่อ ให้เป็นตัวเลขเดือน (0-11)
+    // ตัวแปรสำหรับเก็บข้อมูลทั้งหมดและตัวกรอง
+    let globalData = [];
+    let uniqueNames = new Set();
+    let uniqueMonths = new Set();
+
     const thaiMonths = {
         "ม.ค.":0, "ก.พ.":1, "มี.ค.":2, "เม.ย.":3, "พ.ค.":4, "มิ.ย.":5,
         "ก.ค.":6, "ส.ค.":7, "ก.ย.":8, "ต.ค.":9, "พ.ย.":10, "ธ.ค.":11
     };
     const fullMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
-    // ฟังก์ชันแปลงวันที่รูปแบบ "16 ก.ค. 69 09:02 น." ให้เป็น Date Object
     function parseThaiDate(dateStr) {
         if (!dateStr) return null;
         const parts = dateStr.split(' ');
@@ -64,15 +85,10 @@
         const day = parseInt(parts[0], 10);
         const month = thaiMonths[parts[1]];
         let yearStr = parts[2];
-        
-        // ถ้าปีมาแบบ 2 หลัก (เช่น 69) ให้เติม 25 เข้าไปข้างหน้า
         if (yearStr.length === 2) yearStr = "25" + yearStr; 
-        
-        // แปลง พ.ศ. เป็น ค.ศ.
         const yearCE = parseInt(yearStr, 10) - 543;
 
         if (isNaN(day) || month === undefined || isNaN(yearCE)) return null;
-        
         return new Date(yearCE, month, day);
     }
 
@@ -86,21 +102,21 @@
         const file = e.target.files[0];
         if (!file) return;
 
-        // ใช้ PapaParse อ่านไฟล์ CSV ซึ่งจะไวมาก
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
             complete: function(results) {
-                processData(results.data);
+                processRawData(results.data);
             }
         });
     });
 
-    function processData(data) {
-        const grouped = {};
-        
+    function processRawData(data) {
+        globalData = [];
+        uniqueNames.clear();
+        uniqueMonths.clear();
+
         data.forEach(row => {
-            // ดึงชื่อคอลัมน์ตามไฟล์ที่แนบมาเป๊ะๆ
             const name = row['ชื่อผู้ตรวจ'];
             const db = row['ชื่อฐานข้อมูล'];
             const dateStr = row['วันที่'];
@@ -110,29 +126,78 @@
             const dateObj = parseThaiDate(dateStr);
             if (!dateObj) return;
 
-            const dayOfWeek = dateObj.getDay();
-            
-            // กรองเฉพาะ จันทร์ (1) ถึง ศุกร์ (5) เท่านั้น
-            if (dayOfWeek < 1 || dayOfWeek > 5) return; 
-
             const monthStr = fullMonths[dateObj.getMonth()] + " " + (dateObj.getFullYear() + 543);
             const weekNum = getWeekOfMonth(dateObj);
             
-            // สร้างคีย์เพื่อรวมข้อมูลซ้ำเข้าด้วยกัน
-            const key = `${name}|${db}|${monthStr}|${weekNum}`;
+            uniqueNames.add(name);
+            uniqueMonths.add(monthStr);
+
+            globalData.push({
+                name: name,
+                db: db,
+                month: monthStr,
+                week: weekNum
+            });
+        });
+
+        setupFilters();
+        applyFilters(); 
+    }
+
+    function setupFilters() {
+        const nameSelect = document.getElementById('filterName');
+        const monthSelect = document.getElementById('filterMonth');
+
+        nameSelect.innerHTML = '<option value="all">-- ทั้งหมด --</option>';
+        monthSelect.innerHTML = '<option value="all">-- ทั้งหมด --</option>';
+
+        // เติมรายชื่อใส่ Dropdown
+        Array.from(uniqueNames).sort().forEach(name => {
+            nameSelect.innerHTML += `<option value="${name}">${name}</option>`;
+        });
+
+        // เติมเดือนใส่ Dropdown
+        Array.from(uniqueMonths).forEach(month => {
+            monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
+        });
+
+        // เปิดให้เห็นกล่อง Filter
+        document.getElementById('filterSection').style.display = 'block';
+    }
+
+    // เมื่อเปลี่ยนค่าใน Filter ให้ดึงข้อมูลมาคำนวณใหม่
+    document.getElementById('filterName').addEventListener('change', applyFilters);
+    document.getElementById('filterMonth').addEventListener('change', applyFilters);
+
+    function applyFilters() {
+        const selectedName = document.getElementById('filterName').value;
+        const selectedMonth = document.getElementById('filterMonth').value;
+
+        // กรองข้อมูลตามที่เลือก
+        const filteredData = globalData.filter(item => {
+            const matchName = (selectedName === "all" || item.name === selectedName);
+            const matchMonth = (selectedMonth === "all" || item.month === selectedMonth);
+            return matchName && matchMonth;
+        });
+
+        const grouped = {};
+        
+        filteredData.forEach(item => {
+            const key = `${item.name}|${item.db}|${item.month}`;
             
             if (!grouped[key]) {
                 grouped[key] = { 
-                    name: name, 
-                    db: db, 
-                    month: monthStr, 
-                    week: weekNum, 
-                    days: {1:0, 2:0, 3:0, 4:0, 5:0} 
+                    name: item.name, 
+                    db: item.db, 
+                    month: item.month, 
+                    weeks: {1:0, 2:0, 3:0, 4:0, 5:0, 6:0} 
                 };
             }
             
-            // บวกจำนวนครั้งในวันนั้น
-            grouped[key].days[dayOfWeek]++;
+            // ป้องกันสัปดาห์เกิน (กรณีเดือนที่เริ่มวันเสาร์-อาทิตย์ อาจมีสัปดาห์ที่ 6)
+            if(item.week >= 1 && item.week <= 6) {
+                grouped[key].weeks[item.week]++;
+            }
         });
 
         renderTable(grouped);
@@ -147,26 +212,27 @@
         for (const key in grouped) {
             hasData = true;
             const row = grouped[key];
-            const total = row.days[1] + row.days[2] + row.days[3] + row.days[4] + row.days[5];
+            const w = row.weeks;
+            const total = w[1] + w[2] + w[3] + w[4] + w[5] + w[6];
             
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.name}</td>
                 <td>${row.db}</td>
                 <td>${row.month}</td>
-                <td class="text-center">${row.week}</td>
-                <td class="text-center text-primary fw-bold">${row.days[1] > 0 ? row.days[1] : '-'}</td>
-                <td class="text-center text-primary fw-bold">${row.days[2] > 0 ? row.days[2] : '-'}</td>
-                <td class="text-center text-primary fw-bold">${row.days[3] > 0 ? row.days[3] : '-'}</td>
-                <td class="text-center text-primary fw-bold">${row.days[4] > 0 ? row.days[4] : '-'}</td>
-                <td class="text-center text-primary fw-bold">${row.days[5] > 0 ? row.days[5] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${w[1] > 0 ? w[1] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${w[2] > 0 ? w[2] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${w[3] > 0 ? w[3] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${w[4] > 0 ? w[4] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${w[5] > 0 ? w[5] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${w[6] > 0 ? w[6] : '-'}</td>
                 <td class="text-center bg-warning text-dark fw-bold">${total}</td>
             `;
             tbody.appendChild(tr);
         }
 
         if (!hasData) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">ไม่พบข้อมูลที่ตรงเงื่อนไข หรือรูปแบบไฟล์ไม่ถูกต้อง</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">ไม่พบข้อมูลที่ตรงกับตัวกรอง</td></tr>`;
         }
 
         document.getElementById('tableContainer').style.display = 'block';
