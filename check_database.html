@@ -3,159 +3,147 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบรายงานฐานข้อมูล (HTML Parser)</title>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <style>
-        :root { --primary: #db2777; --bg: #f8fafc; --card: #ffffff; --text: #1e293b; --border: #e2e8f0; }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
-        body { background-color: var(--bg); color: var(--text); padding: 20px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        h2 { text-align: center; margin-bottom: 20px; color: var(--primary); }
-        
-        .card { background: var(--card); border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid var(--border); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        
-        /* กล่องวางโค้ด HTML */
-        textarea { width: 100%; height: 100px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: monospace; font-size: 12px; margin-bottom: 10px; resize: vertical; }
-        button.btn-main { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; font-size: 16px; }
-        button.btn-main:hover { background: #be185d; }
-
-        /* ตัวกรอง */
-        .filters { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
-        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 200px; }
-        .filter-group label { font-size: 13px; font-weight: 500; color: #64748b; margin-bottom: 5px; }
-        .filter-group select, .filter-group input { padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; outline: none; }
-        
-        /* ตาราง */
-        .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; max-height: 60vh; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
-        th, td { padding: 10px; border: 1px solid var(--border); text-align: center; }
-        th { background: #f1f5f9; position: sticky; top: 0; z-index: 2; }
-        td.text-left { text-align: left; position: sticky; left: 0; background: white; z-index: 1; }
-        th.sticky-col { position: sticky; left: 0; z-index: 3; }
-    </style>
+    <title>Chula AIX - Database Usage Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
-<body>
+<body class="bg-gray-50 text-gray-800 p-8 min-h-screen">
 
-    <div class="container">
-        <h2>📊 ดึงข้อมูลจาก View-Source</h2>
-        
-        <div class="card">
-            <label style="font-weight: bold; font-size: 14px;">1. วางโค้ด HTML ที่ก๊อปปี้มาจากหน้า view-source ลงในช่องนี้</label>
-            <textarea id="html-input" placeholder="<html lang='th'>... วางโค้ดทั้งหมดที่นี่ ...</html>"></textarea>
-            <button class="btn-main" onclick="processHTML()">🔄 แปลงข้อมูลเป็นตาราง</button>
+    <div class="max-w-6xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-blue-900">ระบบติดตามการใช้งานฐานข้อมูล | Chula AIX</h1>
+
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+            <label class="block text-sm font-semibold text-gray-700 mb-3">1. อัปโหลดไฟล์ Excel (.xlsx, .xls)</label>
+            <input type="file" id="uploadExcel" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"/>
+            <p class="text-xs text-gray-400 mt-2">* โครงสร้างไฟล์ Excel ควรเป็นคอลัมน์: วันที่ (YYYY-MM-DD), ชื่อคน, ฐานข้อมูล, จำนวนการใช้งาน</p>
         </div>
 
-        <div class="card" id="dashboard-section" style="display: none; padding: 0;">
-            <div style="padding: 20px; border-bottom: 1px solid var(--border);">
-                <div class="filters">
-                    <div class="filter-group">
-                        <label>ค้นหาชื่อฐานข้อมูล</label>
-                        <input type="text" id="filter-db" placeholder="พิมพ์ชื่อฐานข้อมูล..." onkeyup="renderTable()">
-                    </div>
-                </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+            <label class="block text-sm font-semibold text-gray-700 mb-3">2. ตัวกรองข้อมูล (Filter)</label>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input type="text" id="filterName" placeholder="ค้นหาชื่อคน..." class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="text" id="filterDB" placeholder="ค้นหาฐานข้อมูล..." class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="month" id="filterMonth" class="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="clearFilterBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2 px-4 rounded-md transition">ล้างตัวกรอง</button>
             </div>
-            
-            <div class="table-responsive">
-                <table>
-                    <thead id="table-head"></thead>
-                    <tbody id="table-body"></tbody>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">วันที่</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">ชื่อคน</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">ฐานข้อมูล</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">การใช้งาน (ครั้ง)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td colspan="4" class="px-6 py-8 text-center text-sm text-gray-400">กรุณาอัปโหลดไฟล์ Excel เพื่อแสดงข้อมูล</td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        let rawData = [];
-        let headers = [];
+        let excelData = []; // เก็บข้อมูลดิบทั้งหมดที่อ่านได้จาก Excel
 
-        function processHTML() {
-            const htmlString = document.getElementById('html-input').value;
-            if (!htmlString.trim()) {
-                alert("กรุณาวางโค้ด HTML ก่อนครับ");
-                return;
-            }
+        const uploadInput = document.getElementById('uploadExcel');
+        const filterName = document.getElementById('filterName');
+        const filterDB = document.getElementById('filterDB');
+        const filterMonth = document.getElementById('filterMonth');
+        const tableBody = document.getElementById('tableBody');
+        const clearFilterBtn = document.getElementById('clearFilterBtn');
 
-            // ใช้ DOMParser เพื่อแปลง String เป็นโครงสร้าง HTML (Virtual DOM)
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlString, 'text/html');
-            
-            // หาตารางทั้งหมด (สมมติว่าตารางข้อมูลคือตารางแรกหรือตารางหลัก)
-            const tables = doc.querySelectorAll('table');
-            if (tables.length === 0) {
-                alert("ไม่พบแท็ก <table> ในโค้ด HTML ที่วางครับ");
-                return;
-            }
+        // 1. ฟังก์ชันเมื่อมีการอัปโหลดไฟล์
+        uploadInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
 
-            // เลือกตารางที่น่าจะเป็นข้อมูลที่สุด (มักจะเป็นตารางที่ใหญ่ที่สุด)
-            let targetTable = tables[0]; 
-            const rows = targetTable.querySelectorAll('tr');
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const data = event.target.result;
+                const workbook = XLSX.read(data, { type: 'binary' });
+                
+                // อ่านข้อมูลจาก Sheet แรก
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // แปลง Sheet เป็น JSON array
+                // กำหนด raw: false เพื่อให้ดึงค่าที่ format แล้ว (เช่น วันที่) ออกมาเป็น String
+                excelData = XLSX.utils.sheet_to_json(worksheet, { raw: false }); 
+                
+                renderTable(excelData);
+            };
+            reader.readAsBinaryString(file);
+        });
 
-            if (rows.length < 2) {
-                alert("ตารางนี้ไม่มีข้อมูล หรือโครงสร้างไม่ถูกต้อง");
-                return;
-            }
+        // 2. ฟังก์ชันอัปเดตตารางตามตัวกรอง
+        function applyFilters() {
+            const nameVal = filterName.value.toLowerCase();
+            const dbVal = filterDB.value.toLowerCase();
+            const monthVal = filterMonth.value; // รูปแบบ YYYY-MM
 
-            rawData = [];
-            headers = [];
+            const filteredData = excelData.filter(row => {
+                // ดึงข้อมูลจากคอลัมน์ (อ้างอิงชื่อคอลัมน์ใน Excel ของคุณ)
+                const rowName = (row['ชื่อคน'] || row['Name'] || '').toString().toLowerCase();
+                const rowDB = (row['ฐานข้อมูล'] || row['Database'] || '').toString().toLowerCase();
+                const rowDate = (row['วันที่'] || row['Date'] || '').toString();
 
-            // แกะ Header (สมมติว่าอยู่บรรทัดที่ 1 และ 2)
-            // หมายเหตุ: โค้ดส่วนนี้เป็นการอ่าน <th> แบบง่ายๆ หาก Header ซับซ้อนมาก (มี colspan/rowspan เยอะ) อาจต้องปรับแก้
-            let headerCells = rows[0].querySelectorAll('th, td');
-            headerCells.forEach(cell => headers.push(cell.innerText.trim()));
+                const matchName = rowName.includes(nameVal);
+                const matchDB = rowDB.includes(dbVal);
+                let matchMonth = true;
 
-            // แกะข้อมูล (วนลูปตั้งแต่บรรทัดที่เป็นข้อมูล สมมติว่าเริ่มที่ index 2)
-            for (let i = 2; i < rows.length; i++) {
-                let cols = rows[i].querySelectorAll('td');
-                if (cols.length > 2) {
-                    let rowValues = [];
-                    cols.forEach(col => rowValues.push(col.innerText.trim()));
-                    
-                    rawData.push({
-                        id: i, // ลำดับ
-                        dbName: rowValues[1] || "ไม่ระบุ", // สมมติว่าชื่อฐานข้อมูลอยู่คอลัมน์ 2 (index 1)
-                        values: rowValues
-                    });
+                if (monthVal) {
+                    // ตรวจสอบว่าวันที่ใน Excel มีเดือนและปีตรงกับที่ Filter หรือไม่
+                    matchMonth = rowDate.includes(monthVal); 
                 }
-            }
 
-            document.getElementById('dashboard-section').style.display = 'block';
-            renderTable();
-            alert("ดึงข้อมูลสำเร็จ! พบข้อมูล " + rawData.length + " รายการ");
+                return matchName && matchDB && matchMonth;
+            });
+
+            renderTable(filteredData);
         }
 
-        function renderTable() {
-            const tbody = document.getElementById('table-body');
-            const thead = document.getElementById('table-head');
-            const filterDb = document.getElementById('filter-db').value.toLowerCase();
-            
-            tbody.innerHTML = '';
-            thead.innerHTML = '';
+        // 3. ฟังก์ชันวาดตาราง
+        function renderTable(data) {
+            tableBody.innerHTML = ''; // ล้างข้อมูลเดิม
 
-            // สร้าง Header (แบบพื้นฐาน)
-            let trHead = document.createElement('tr');
-            trHead.innerHTML = `<th class="sticky-col">ลำดับ</th><th class="sticky-col" style="left: 60px;">ชื่อฐานข้อมูล</th>`;
-            
-            // หากตารางจริงมีคอลัมน์สถิติ เริ่มจากคอลัมน์ที่ 3 เป็นต้นไป (index 2)
-            for (let i = 2; i < (rawData[0]?.values.length || 10); i++) {
-                trHead.innerHTML += `<th>ข้อมูลคอลัมน์ ${i+1}</th>`; 
+            if (data.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-8 text-center text-sm text-gray-500">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+                return;
             }
-            thead.appendChild(trHead);
 
-            // กรองและสร้าง Body
-            const filteredData = rawData.filter(item => item.dbName.toLowerCase().includes(filterDb));
-
-            filteredData.forEach((row, index) => {
-                let tr = document.createElement('tr');
-                tr.innerHTML = `<td class="text-left">${index + 1}</td><td class="text-left" style="left: 60px; font-weight: bold; color: var(--primary);">${row.dbName}</td>`;
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-blue-50 transition-colors';
                 
-                // ใส่ตัวเลขสถิติ (เริ่มจากคอลัมน์ที่ 3)
-                for (let i = 2; i < row.values.length; i++) {
-                    let val = row.values[i];
-                    tr.innerHTML += `<td>${val === '0' || !val ? '<span style="color:#cbd5e1;">0</span>' : val}</td>`;
-                }
-                tbody.appendChild(tr);
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['วันที่'] || row['Date'] || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${row['ชื่อคน'] || row['Name'] || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">${row['ฐานข้อมูล'] || row['Database'] || '-'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">${row['การใช้งาน'] || row['Hits'] || row['จำนวน'] || '0'}</td>
+                `;
+                tableBody.appendChild(tr);
             });
         }
+
+        // ผูก Event Listeners กับช่อง Filter
+        filterName.addEventListener('input', applyFilters);
+        filterDB.addEventListener('input', applyFilters);
+        filterMonth.addEventListener('change', applyFilters);
+
+        // ปุ่มล้างตัวกรอง
+        clearFilterBtn.addEventListener('click', () => {
+            filterName.value = '';
+            filterDB.value = '';
+            filterMonth.value = '';
+            renderTable(excelData);
+        });
     </script>
 </body>
 </html>
