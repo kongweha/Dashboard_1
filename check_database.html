@@ -3,55 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>สรุปผลการตรวจฐานข้อมูล</title>
+    <title>ระบบรายงานผลการตรวจฐานข้อมูล</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; padding: 20px; }
-        .container-fluid { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f4f6f9; padding: 20px; }
+        .container-fluid { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
         th { text-align: center; vertical-align: middle; background-color: #e9ecef !important; border: 1px solid #dee2e6; }
         td { vertical-align: middle; text-align: center; border: 1px solid #dee2e6; }
-        .text-start-td { text-align: left; }
-        .filter-box { background-color: #f1f3f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .table-responsive { max-height: 70vh; overflow-y: auto; }
+        .text-start-td { text-align: left; font-weight: 500; }
+        .filter-box { background-color: #ffffff; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #e0e0e0; }
+        .table-responsive { max-height: 65vh; overflow-y: auto; }
         thead { position: sticky; top: 0; z-index: 2; }
+        /* ตกแต่ง Dashboard Cards */
+        .stat-card { border-radius: 10px; padding: 20px; color: white; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .stat-card h3 { font-size: 2.5rem; margin-bottom: 0; font-weight: bold; }
+        .stat-card p { margin-bottom: 5px; font-size: 1.1rem; opacity: 0.9; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
-    <h3 class="mb-4 text-primary text-center">ระบบสรุปผลการตรวจฐานข้อมูล</h3>
+    <h2 class="mb-4 text-primary text-center fw-bold">รายงานผลการตรวจฐานข้อมูลอิเล็กทรอนิกส์</h2>
     
-    <div class="mb-4 col-md-6 mx-auto text-center">
-        <label for="csvFile" class="form-label fw-bold d-block text-start">อัปโหลดไฟล์ (.csv)</label>
-        <div class="input-group">
-            <input type="file" id="csvFile" accept=".csv" class="form-control">
-            <button class="btn btn-outline-danger" type="button" id="clearDataBtn" style="display: none;">ล้างข้อมูลที่จำไว้</button>
-        </div>
-        <small class="text-muted text-start d-block mt-1">* ระบบจะจดจำไฟล์ล่าสุดไว้จนกว่าจะอัปโหลดใหม่ หรือกดล้างข้อมูล</small>
+    <div id="uploadSection" class="mb-4 col-md-6 mx-auto text-center p-4" style="border: 2px dashed #ccc; border-radius: 10px; background: #fdfdfd;">
+        <label for="csvFile" class="form-label fw-bold d-block text-secondary">นำเข้าไฟล์ข้อมูล (.csv)</label>
+        <input type="file" id="csvFile" accept=".csv" class="form-control mb-2">
+        <small class="text-muted">* อัปโหลดเพียงครั้งเดียว ระบบจะจดจำไฟล์นี้ไว้ใช้ตลอดไป</small>
     </div>
 
-    <div class="filter-box mx-auto" id="filterSection" style="display: none; max-width: 900px;">
-        <div class="row">
+    <div id="activeDataSection" class="alert alert-success d-flex justify-content-between align-items-center mx-auto" style="display:none !important; max-width: 900px;">
+        <div>
+            <span class="fw-bold fs-5">✅ ระบบพร้อมใช้งาน</span><br>
+            <small>กำลังดึงข้อมูลจากฐานข้อมูลจำลอง (Local Storage)</small>
+        </div>
+        <button class="btn btn-outline-danger" id="clearDataBtn">🔄 อัปโหลดไฟล์ข้อมูลใหม่</button>
+    </div>
+
+    <div class="row mb-4 mx-auto" id="dashboardSection" style="display: none; max-width: 1000px;">
+        <div class="col-md-4 mb-3">
+            <div class="stat-card" style="background: linear-gradient(45deg, #0d6efd, #0043a8);">
+                <p>ยอดการตรวจทั้งหมด</p>
+                <h3 id="statTotalChecks">0</h3>
+                <small>ครั้ง</small>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card" style="background: linear-gradient(45deg, #198754, #0f5132);">
+                <p>จำนวนฐานข้อมูล</p>
+                <h3 id="statTotalDBs">0</h3>
+                <small>ฐาน</small>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card" style="background: linear-gradient(45deg, #0dcaf0, #087990);">
+                <p>จำนวนผู้ปฏิบัติงาน</p>
+                <h3 id="statTotalUsers">0</h3>
+                <small>คน</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-box mx-auto shadow-sm" id="filterSection" style="display: none; max-width: 1000px;">
+        <div class="row align-items-end">
             <div class="col-md-4 mb-2">
-                <label class="fw-bold">ผู้ตรวจฐานข้อมูล:</label>
+                <label class="fw-bold text-secondary">ผู้ตรวจฐานข้อมูล:</label>
                 <select id="filterName" class="form-select">
                     <option value="all">-- ทั้งหมด --</option>
                 </select>
             </div>
             <div class="col-md-4 mb-2">
-                <label class="fw-bold">ตั้งแต่เดือน:</label>
+                <label class="fw-bold text-secondary">ตั้งแต่เดือน:</label>
                 <select id="filterStartMonth" class="form-select"></select>
             </div>
             <div class="col-md-4 mb-2">
-                <label class="fw-bold">ถึงเดือน:</label>
+                <label class="fw-bold text-secondary">ถึงเดือน:</label>
                 <select id="filterEndMonth" class="form-select"></select>
             </div>
         </div>
     </div>
 
-    <div class="table-responsive" id="tableContainer" style="display:none;">
-        <table class="table table-bordered table-striped table-hover m-0">
+    <div class="table-responsive shadow-sm" id="tableContainer" style="display:none; border-radius: 8px;">
+        <table class="table table-bordered table-striped table-hover m-0 bg-white">
             <thead id="resultHead"></thead>
             <tbody id="resultBody"></tbody>
         </table>
@@ -69,20 +102,21 @@
     };
     const fullMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
-    // ทำงานทันทีเมื่อโหลดหน้าเว็บ
+    // 1. ตรวจสอบข้อมูลเมื่อเปิดหน้าเว็บ
     document.addEventListener("DOMContentLoaded", function() {
         const savedData = localStorage.getItem('dcheck_saved_csv');
         if (savedData) {
             try {
                 const parsedData = JSON.parse(savedData);
                 processRawData(parsedData);
-                document.getElementById('clearDataBtn').style.display = 'block';
+                toggleUploadUI(true);
             } catch (e) {
                 console.error("ไม่สามารถอ่านข้อมูลที่บันทึกไว้ได้");
             }
         }
     });
 
+    // 2. เมื่ออัปโหลดไฟล์
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -91,25 +125,34 @@
             header: true,
             skipEmptyLines: true,
             complete: function(results) {
-                // บันทึกข้อมูลลง localStorage
                 try {
                     localStorage.setItem('dcheck_saved_csv', JSON.stringify(results.data));
-                    document.getElementById('clearDataBtn').style.display = 'block';
+                    toggleUploadUI(true);
                 } catch (err) {
-                    alert("ไฟล์มีขนาดใหญ่เกินกว่าที่เบราว์เซอร์จะจำได้ ระบบจะแสดงผลอย่างเดียวแต่ไม่จำค่าเมื่อรีเฟรช");
+                    alert("ไฟล์มีขนาดใหญ่เกินไป ระบบจะแสดงผลแต่ไม่จำค่าถาวร");
                 }
                 processRawData(results.data);
             }
         });
     });
 
-    // ปุ่มล้างข้อมูล
+    // 3. ปุ่มเคลียร์ไฟล์
     document.getElementById('clearDataBtn').addEventListener('click', function() {
-        if(confirm("คุณต้องการล้างข้อมูลที่ระบบจำไว้ใช่หรือไม่?")) {
+        if(confirm("คุณต้องการล้างข้อมูลเดิม และอัปโหลดไฟล์ใหม่ใช่หรือไม่?")) {
             localStorage.removeItem('dcheck_saved_csv');
-            location.reload(); // รีเฟรชหน้าจอใหม่
+            location.reload(); 
         }
     });
+
+    function toggleUploadUI(hasData) {
+        if(hasData) {
+            document.getElementById('uploadSection').style.display = 'none';
+            document.getElementById('activeDataSection').style.setProperty('display', 'flex', 'important');
+        } else {
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('activeDataSection').style.setProperty('display', 'none', 'important');
+        }
+    }
 
     function parseThaiDate(dateStr) {
         if (!dateStr) return null;
@@ -164,17 +207,10 @@
                 monthSet.set(monthVal, { val: monthVal, str: monthStr });
             }
 
-            globalData.push({
-                name: name,
-                db: db,
-                monthVal: monthVal,
-                monthStr: monthStr,
-                week: weekNum
-            });
+            globalData.push({ name, db, monthVal, monthStr, week: weekNum });
         });
 
         availableMonths = Array.from(monthSet.values()).sort((a, b) => a.val - b.val);
-
         setupFilters();
         applyFilters(); 
     }
@@ -220,32 +256,55 @@
             endVal = temp;
         }
 
+        // กรองข้อมูลตามเงื่อนไข
         const filteredData = globalData.filter(item => {
             const matchName = (selectedName === "all" || item.name === selectedName);
             const matchMonth = (item.monthVal >= startVal && item.monthVal <= endVal);
             return matchName && matchMonth;
         });
 
-        buildDynamicTable(filteredData);
+        updateDashboard(filteredData);
+        buildDynamicTable(filteredData, startVal, endVal);
     }
 
-    function buildDynamicTable(filteredData) {
+    // อัปเดตตัวเลขใน Dashboard
+    function updateDashboard(filteredData) {
+        const uniqueDBs = new Set(filteredData.map(d => d.db));
+        const uniqueUsers = new Set(filteredData.map(d => d.name));
+        
+        document.getElementById('statTotalChecks').innerText = filteredData.length.toLocaleString();
+        document.getElementById('statTotalDBs').innerText = uniqueDBs.size.toLocaleString();
+        document.getElementById('statTotalUsers').innerText = uniqueUsers.size.toLocaleString();
+        
+        document.getElementById('dashboardSection').style.display = 'flex';
+    }
+
+    // สร้างตารางโดยบังคับแสดงทุกเดือนในช่วงที่เลือก
+    function buildDynamicTable(filteredData, startVal, endVal) {
         const tableStructure = {}; 
         
-        filteredData.forEach(item => {
-            if (!tableStructure[item.monthVal]) {
-                const yearCE = Math.floor(item.monthVal / 100);
-                const monthIdx = item.monthVal % 100;
-                const maxWeeks = getWeeksInMonth(yearCE, monthIdx); 
-                
-                const allWeeks = new Set();
-                for(let i = 1; i <= maxWeeks; i++) {
-                    allWeeks.add(i); 
-                }
-                
-                tableStructure[item.monthVal] = { monthStr: item.monthStr, weeks: allWeeks };
+        // 1. สร้างโครงสร้างทุกเดือนตั้งแต่ startVal ถึง endVal ให้ครบ
+        let currentMonthVal = startVal;
+        while (currentMonthVal <= endVal) {
+            const yearCE = Math.floor(currentMonthVal / 100);
+            const monthIdx = currentMonthVal % 100;
+            const maxWeeks = getWeeksInMonth(yearCE, monthIdx); 
+            const monthStr = fullMonths[monthIdx] + " " + (yearCE + 543);
+            
+            const allWeeks = new Set();
+            for(let i = 1; i <= maxWeeks; i++) { allWeeks.add(i); }
+            
+            tableStructure[currentMonthVal] = { monthStr: monthStr, weeks: allWeeks };
+
+            // ขยับไปเดือนถัดไป
+            let nextMonth = monthIdx + 1;
+            let nextYear = yearCE;
+            if (nextMonth > 11) {
+                nextMonth = 0;
+                nextYear++;
             }
-        });
+            currentMonthVal = nextYear * 100 + nextMonth;
+        }
 
         const columns = Object.keys(tableStructure)
             .map(val => parseInt(val))
@@ -258,13 +317,13 @@
                 };
             });
 
+        // 2. รวบรวมผลนับ
         const grouped = {};
         filteredData.forEach(item => {
             const rowKey = `${item.name}|${item.db}`;
             if (!grouped[rowKey]) {
                 grouped[rowKey] = { name: item.name, db: item.db, counts: {}, total: 0 };
             }
-            
             const cellKey = `${item.monthVal}|${item.week}`;
             grouped[rowKey].counts[cellKey] = (grouped[rowKey].counts[cellKey] || 0) + 1;
             grouped[rowKey].total++;
@@ -276,16 +335,15 @@
     function renderHTMLTable(columns, grouped) {
         const thead = document.getElementById('resultHead');
         const tbody = document.getElementById('resultBody');
-        
-        thead.innerHTML = "";
-        tbody.innerHTML = "";
+        thead.innerHTML = ""; tbody.innerHTML = "";
 
-        if (columns.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">ไม่พบข้อมูลในช่วงเดือน หรือตัวกรองที่เลือก</td></tr>`;
+        if (Object.keys(grouped).length === 0) {
+            tbody.innerHTML = `<tr><td colspan="50" class="text-center text-danger py-4">ไม่มีประวัติการตรวจในเงื่อนไขที่เลือก</td></tr>`;
             document.getElementById('tableContainer').style.display = 'block';
             return;
         }
 
+        // หัวตารางแถว 1 (ชื่อเดือน)
         let tr1 = `<tr>
             <th rowspan="2" style="min-width: 150px;">ชื่อผู้ตรวจ</th>
             <th rowspan="2" style="min-width: 200px;">ฐานที่ตรวจ</th>`;
@@ -293,35 +351,40 @@
         columns.forEach(col => {
             tr1 += `<th colspan="${col.weeks.length}">${col.monthStr}</th>`;
         });
-        
         tr1 += `<th rowspan="2" class="bg-warning">รวมทั้งหมด</th></tr>`;
 
+        // หัวตารางแถว 2 (สัปดาห์)
         let tr2 = `<tr>`;
         columns.forEach(col => {
             col.weeks.forEach(w => {
-                tr2 += `<th class="bg-light" style="min-width: 80px;">สัปดาห์ ${w}</th>`;
+                tr2 += `<th class="bg-light text-muted" style="min-width: 70px; font-size: 0.9rem;">สัปดาห์ ${w}</th>`;
             });
         });
         tr2 += `</tr>`;
 
         thead.innerHTML = tr1 + tr2;
 
+        // วาดข้อมูล
         for (const key in grouped) {
             const row = grouped[key];
             let tr = `<tr>
                 <td class="text-start-td">${row.name}</td>
-                <td class="text-start-td">${row.db}</td>`;
+                <td class="text-start-td text-secondary">${row.db}</td>`;
             
             columns.forEach(col => {
                 col.weeks.forEach(w => {
                     const cellKey = `${col.monthVal}|${w}`;
-                    const count = row.counts[cellKey] || 0; 
-                    const textClass = count > 0 ? 'text-primary fw-bold' : 'text-muted';
-                    tr += `<td class="${textClass}">${count}</td>`;
+                    const count = row.counts[cellKey] || 0;
+                    
+                    // หาก count เป็น 0 ให้แสดงผลเป็นเครื่องหมาย - แทน 
+                    const displayVal = count > 0 ? count : '-';
+                    const textClass = count > 0 ? 'text-primary fw-bold' : 'text-muted opacity-50';
+                    
+                    tr += `<td class="${textClass}">${displayVal}</td>`;
                 });
             });
 
-            tr += `<td class="bg-warning text-dark fw-bold">${row.total}</td></tr>`;
+            tr += `<td class="bg-warning text-dark fw-bold fs-5">${row.total}</td></tr>`;
             tbody.innerHTML += tr;
         }
 
