@@ -3,167 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายงานการเข้าใช้ฐานข้อมูล (Dynamic Calendar)</title>
+    <title>Database Usage Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f8f9fa; color: #333; }
-        h2 { text-align: center; color: #2c3e50; }
-        .filter-section { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
-        .filter-group { display: flex; flex-direction: column; }
-        .filter-group label { font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #555; }
-        .filter-group input, .filter-group select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 160px; outline: none; }
-        .filter-group input:focus, .filter-group select:focus { border-color: #007bff; }
-        button.btn-search { padding: 9px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
-        button.btn-search:hover { background-color: #0056b3; }
-        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 13px; }
-        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: center; }
-        th { background-color: #e9ecef; font-weight: bold; color: #495057; }
+        :root {
+            --primary-color: #db2777; /* โทนสีชมพู (อิงตามสีจุฬาฯ) */
+            --primary-hover: #be185d;
+            --bg-color: #f1f5f9;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 2rem;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .header {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        
+        .header h1 { font-size: 1.8rem; color: var(--text-main); font-weight: 600; }
+        .header p { color: var(--text-muted); font-size: 0.95rem; margin-top: 0.5rem; }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid var(--border-color);
+        }
+
+        /* ส่วนนำเข้าข้อมูล */
+        .import-section {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            background: #fdf2f8;
+            border: 1px dashed var(--primary-color);
+        }
+
+        .import-section input[type="text"] {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+
+        /* ส่วนตัวกรอง (Filters) */
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 0.4rem; }
+        .input-group label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); }
+        .input-group select, .input-group input {
+            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .input-group select:focus, .input-group input:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(219, 39, 119, 0.1); }
+
+        button {
+            padding: 0.6rem 1.2rem;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover { background-color: var(--primary-hover); }
+
+        /* ส่วนตาราง */
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        tbody tr:hover { background-color: #f8fafc; }
         .text-left { text-align: left; }
-        tbody tr:hover { background-color: #f1f1f1; }
-        thead th:nth-child(1), thead th:nth-child(2) { position: sticky; left: 0; z-index: 3; background-color: #e9ecef; }
-        tbody td:nth-child(1), tbody td:nth-child(2) { position: sticky; left: 0; z-index: 1; background-color: #fff; }
-        thead th:nth-child(2), tbody td:nth-child(2) { left: 50px; }
+        
+        .badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.3rem;
+        }
+
+        /* ตรึงคอลัมน์ (Sticky) */
+        thead th:nth-child(1), thead th:nth-child(2) { position: sticky; left: 0; z-index: 3; background-color: #f8fafc; }
+        tbody td:nth-child(1), tbody td:nth-child(2) { position: sticky; left: 0; z-index: 1; background-color: white; }
+        thead th:nth-child(2), tbody td:nth-child(2) { left: 60px; box-shadow: inset -1px 0 0 var(--border-color); }
         thead tr:nth-child(1) th { position: sticky; top: 0; z-index: 4; }
-        thead tr:nth-child(2) th { position: sticky; top: 35px; z-index: 2; }
+        thead tr:nth-child(2) th { position: sticky; top: 43px; z-index: 2; }
         thead tr:nth-child(1) th:nth-child(1), thead tr:nth-child(1) th:nth-child(2) { z-index: 5; }
+
+        .empty-state { padding: 3rem; text-align: center; color: var(--text-muted); }
     </style>
 </head>
 <body>
 
-    <h2>รายงานตรวจสอบการเข้าใช้งานฐานข้อมูล (อัปเดตปฏิทินจริง)</h2>
-
-    <div class="filter-section">
-        <div class="filter-group">
-            <label>ปี (ค.ศ.)</label>
-            <select id="filter-year" onchange="onYearChange()"></select>
+    <div class="container">
+        <div class="header">
+            <h1>ระบบรายงานการใช้งานฐานข้อมูล</h1>
+            <p>Database Usage Analytics Dashboard</p>
         </div>
-        <div class="filter-group">
-            <label>เดือน</label>
-            <select id="filter-month">
-                <option value="">-- แสดงทุกเดือน --</option>
+
+        <div class="card import-section">
+            <div style="flex-shrink: 0;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            </div>
+            <input type="text" id="json-input" placeholder="วางโค้ดข้อมูล (JSON) ที่คัดลอกจาก Console ลงที่นี่...">
+            <button onclick="loadImportedData()">โหลดข้อมูล</button>
+            <button onclick="loadMockData()" style="background-color: #64748b;">ดูตัวอย่าง</button>
+        </div>
+
+        <div class="card filters">
+            <div class="input-group">
+                <label>ปี (ค.ศ.)</label>
+                <select id="filter-year" onchange="onYearChange()"></select>
+            </div>
+            <div class="input-group">
+                <label>เดือน</label>
+                <select id="filter-month">
+                    <option value="">-- แสดงทุกเดือน --</option>
                 </select>
+            </div>
+            <div class="input-group">
+                <label>ค้นหาฐานข้อมูล</label>
+                <input type="text" id="filter-db" placeholder="ชื่อฐานข้อมูล...">
+            </div>
+            <div class="input-group">
+                <label>ผู้รับผิดชอบ</label>
+                <input type="text" id="filter-person" placeholder="ชื่อผู้รับผิดชอบ...">
+            </div>
+            <div class="input-group" style="justify-content: flex-end;">
+                <button onclick="applyFilters()">🔍 ค้นหา</button>
+            </div>
         </div>
-        <div class="filter-group">
-            <label>ค้นหาชื่อฐานข้อมูล</label>
-            <input type="text" id="filter-db" placeholder="เช่น Business Source...">
-        </div>
-        <div class="filter-group">
-            <label>ผู้รับผิดชอบ</label>
-            <input type="text" id="filter-person" placeholder="ค้นหาชื่อ...">
-        </div>
-        <button class="btn-search" onclick="applyFilters()">กรองข้อมูล</button>
-    </div>
 
-    <div class="table-responsive">
-        <table id="main-table">
-            <thead id="table-head"></thead>
-            <tbody id="table-body"></tbody>
-        </table>
+        <div class="card" style="padding: 0; overflow: hidden;">
+            <div class="table-wrapper">
+                <table id="main-table">
+                    <thead id="table-head"></thead>
+                    <tbody id="table-body"></tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <script>
+        // โค้ด JavaScript สำหรับควบคุมการทำงาน (ใช้ลอจิกปฏิทินจริง)
         const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
         let timeline = {};
         let rawData = [];
         let filteredData = [];
 
-        // 1. ฟังก์ชันสร้างตัวเลือกปี (ย้อนหลัง 3 ปี ถึง ปีปัจจุบัน)
         function initYearDropdown() {
             const currentYear = new Date().getFullYear();
             const yearSelect = document.getElementById('filter-year');
             yearSelect.innerHTML = '';
             for (let y = currentYear - 3; y <= currentYear + 1; y++) {
                 let option = document.createElement('option');
-                option.value = y;
-                option.text = y;
+                option.value = y; option.text = y;
                 if (y === currentYear) option.selected = true;
                 yearSelect.appendChild(option);
             }
         }
 
-        // 2. ฟังก์ชันคำนวณสัปดาห์ (จันทร์-ศุกร์) ตามปีปฏิทินจริง
         function generateTimelineByYear(year) {
             let newTimeline = {};
-            // หาวันที่ 1 มกราคม ของปีนั้น
             let currentDate = new Date(year, 0, 1);
-            
-            // ปรับถอยไปหาวันจันทร์แรกของสัปดาห์นั้น
-            let dayOfWeek = currentDate.getDay(); // 0 = อา, 1 = จ, ... 6 = ส
+            let dayOfWeek = currentDate.getDay(); 
             let diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
             currentDate = new Date(currentDate.setDate(diff));
 
-            // ลูปสร้างสัปดาห์จนกว่าจะหมดปี
             while (currentDate.getFullYear() <= year) {
                 let startDay = currentDate.getDate();
-                
-                // หาวันศุกร์ของสัปดาห์นี้
-                let fridayDate = new Date(currentDate);
-                fridayDate.setDate(currentDate.getDate() + 4);
+                let fridayDate = new Date(currentDate); fridayDate.setDate(currentDate.getDate() + 4);
                 let endDay = fridayDate.getDate();
-
-                // ใช้วันพฤหัสเป็นเกณฑ์ว่าสัปดาห์นี้ตกอยู่ในเดือนอะไร (มาตรฐาน ISO)
-                let thursdayDate = new Date(currentDate);
-                thursdayDate.setDate(currentDate.getDate() + 3);
+                let thursdayDate = new Date(currentDate); thursdayDate.setDate(currentDate.getDate() + 3);
                 
                 if (thursdayDate.getFullYear() === parseInt(year)) {
                     let monthName = monthNames[thursdayDate.getMonth()];
                     if (!newTimeline[monthName]) newTimeline[monthName] = [];
                     newTimeline[monthName].push(`${startDay}-${endDay}`);
                 }
-                
-                // เลื่อนไปวันจันทร์ถัดไป (+7 วัน)
                 currentDate.setDate(currentDate.getDate() + 7);
             }
             return newTimeline;
         }
 
-        // 3. ฟังก์ชันอัปเดต Dropdown เดือนให้ตรงกับปีที่เลือก
         function updateMonthDropdown() {
             const monthSelect = document.getElementById('filter-month');
             monthSelect.innerHTML = '<option value="">-- แสดงทุกเดือน --</option>';
             for (const month of monthNames) {
-                if (timeline[month]) {
-                    monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
-                }
+                if (timeline[month]) monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
             }
         }
 
-        // 4. ฟังก์ชันสร้างข้อมูลจำลอง (Mock Data) ให้สอดคล้องกับปฏิทินที่สร้างใหม่
-        function generateMockData() {
-            const dbList = [
-                { name: "Business Source Complete", person: "สมชาย" },
-                { name: "Emerald Management", person: "สมศรี" },
-                { name: "Journal Citation Reports (JCR)", person: "สมชาย" },
-                { name: "Newscenter X (NCX)", person: "มาลี" },
-                { name: "SAGE eBooks Collection", person: "มาลี" }
-            ];
-
-            let data = [];
-            dbList.forEach((db, index) => {
-                let row = { id: index + 1, dbName: db.name, person: db.person, data: {} };
-                // สร้างตัวเลขสุ่มให้แต่ละสัปดาห์ที่มีใน Timeline
-                for (const [month, weeks] of Object.entries(timeline)) {
-                    row.data[month] = {};
-                    weeks.forEach(week => {
-                        // สุ่มเลข 0-5
-                        row.data[month][week] = Math.floor(Math.random() * 6);
-                    });
-                }
-                data.push(row);
-            });
-            return data;
-        }
-
-        // 5. เมื่อมีการเปลี่ยนปีใน Dropdown
-        function onYearChange() {
-            const selectedYear = document.getElementById('filter-year').value;
-            timeline = generateTimelineByYear(selectedYear);
-            updateMonthDropdown();
-            rawData = generateMockData();
-            applyFilters();
-        }
-
-        // 6. ฟังก์ชันวาดตาราง
         function renderTable() {
             const thead = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
@@ -172,58 +255,81 @@
             const selectedMonth = document.getElementById('filter-month').value;
             let activeMonths = selectedMonth ? { [selectedMonth]: timeline[selectedMonth] } : timeline;
 
-            // --- สร้าง Header ---
             let trHeader1 = document.createElement('tr');
             let trHeader2 = document.createElement('tr');
-
-            trHeader1.innerHTML = `<th rowspan="2" style="width: 50px; min-width: 50px;">ลำดับ</th><th rowspan="2" style="width: 250px; min-width: 250px;">ฐานข้อมูล</th>`;
+            trHeader1.innerHTML = `<th rowspan="2" style="width: 60px;">ลำดับ</th><th rowspan="2" style="width: 280px;">ฐานข้อมูล</th>`;
 
             for (const [month, weeks] of Object.entries(activeMonths)) {
                 if(!weeks) continue;
                 trHeader1.innerHTML += `<th colspan="${weeks.length}">${month}</th>`;
                 weeks.forEach(week => { trHeader2.innerHTML += `<th>${week}</th>`; });
             }
+            thead.appendChild(trHeader1); thead.appendChild(trHeader2);
 
-            thead.appendChild(trHeader1);
-            thead.appendChild(trHeader2);
-
-            // --- สร้าง Body ---
             if (filteredData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="100%" style="padding: 20px; color: red;">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="100%"><div class="empty-state">กรุณานำเข้าข้อมูล หรือ ไม่พบข้อมูลที่ค้นหา</div></td></tr>`;
                 return;
             }
 
             filteredData.forEach((row, index) => {
                 let tr = document.createElement('tr');
-                tr.innerHTML = `<td>${index + 1}</td><td class="text-left"><strong>${row.dbName}</strong> <br><span style="font-size: 11px; color: #777;">ผู้รับผิดชอบ: ${row.person}</span></td>`;
-                
+                tr.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td class="text-left">
+                        <strong style="color: var(--primary-color);">${row.dbName}</strong><br>
+                        <span class="badge">👨‍💼 ${row.person || 'ไม่ระบุ'}</span>
+                    </td>`;
                 for (const [month, weeks] of Object.entries(activeMonths)) {
                     if(!weeks) continue;
                     weeks.forEach(week => {
-                        let val = (row.data[month] && row.data[month][week] !== undefined) ? row.data[month][week] : 0;
-                        tr.innerHTML += `<td>${val}</td>`;
+                        let val = (row.data[month] && row.data[month][week] !== undefined) ? row.data[month][week] : "-";
+                        tr.innerHTML += `<td>${val === 0 ? '<span style="color:#cbd5e1;">0</span>' : val}</td>`;
                     });
                 }
                 tbody.appendChild(tr);
             });
         }
 
-        // 7. จัดการ Filter การค้นหา
         function applyFilters() {
             const dbKeyword = document.getElementById('filter-db').value.toLowerCase();
             const personKeyword = document.getElementById('filter-person').value.toLowerCase();
-            
-            filteredData = rawData.filter(item => {
-                return item.dbName.toLowerCase().includes(dbKeyword) && item.person.toLowerCase().includes(personKeyword);
-            });
+            filteredData = rawData.filter(item => item.dbName.toLowerCase().includes(dbKeyword) && (item.person || '').toLowerCase().includes(personKeyword));
             renderTable();
         }
 
-        // Initial Setup ตอนโหลดหน้าเว็บ
-        window.onload = () => {
-            initYearDropdown();
-            onYearChange(); // สั่งให้คำนวณและวาดตารางครั้งแรก
-        };
+        function onYearChange() {
+            const selectedYear = document.getElementById('filter-year').value;
+            timeline = generateTimelineByYear(selectedYear);
+            updateMonthDropdown();
+            applyFilters();
+        }
+
+        // ระบบโหลดข้อมูล
+        function loadImportedData() {
+            try {
+                const input = document.getElementById('json-input').value;
+                rawData = JSON.parse(input);
+                applyFilters();
+                alert('โหลดข้อมูลสำเร็จ!');
+            } catch (e) {
+                alert('รูปแบบข้อมูลไม่ถูกต้อง กรุณาตรวจสอบข้อมูล JSON อีกครั้ง');
+            }
+        }
+
+        function loadMockData() {
+            const dbList = [{ name: "Business Source Complete", person: "สมชาย" }, { name: "Emerald Management", person: "สมศรี" }];
+            rawData = dbList.map((db, i) => {
+                let row = { id: i + 1, dbName: db.name, person: db.person, data: {} };
+                for (const [month, weeks] of Object.entries(timeline)) {
+                    row.data[month] = {};
+                    weeks.forEach(week => row.data[month][week] = Math.floor(Math.random() * 5));
+                }
+                return row;
+            });
+            applyFilters();
+        }
+
+        window.onload = () => { initYearDropdown(); onYearChange(); };
     </script>
 </body>
 </html>
