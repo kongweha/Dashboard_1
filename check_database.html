@@ -3,333 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Database Usage Pivot Dashboard</title>
-    <!-- Tailwind CSS สำหรับการจัดสไตล์ให้สวยงาม ทันสมัย -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS สำหรับอ่านไฟล์ Excel และไฟล์ HTML-based Excel -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>ระบบรายงานผลการตรวจฐานข้อมูล</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
-        body {
-            font-family: 'Sarabun', sans-serif;
-            background-color: #f3f4f6;
-        }
-        /* ล็อกคอลัมน์ซ้ายสุดและหัวตารางเวลาเลื่อน */
-        .sticky-col {
-            position: sticky;
-            left: 0;
-            background-color: #f8fafc;
-            z-index: 10;
-        }
-        .sticky-col-2 {
-            position: sticky;
-            left: 60px; /* ขยับตามความกว้างของคอลัมน์แรก */
-            background-color: #f8fafc;
-            z-index: 10;
-        }
-        thead th {
-            position: sticky;
-            top: 0;
-            z-index: 20;
-            background-color: #e2e8f0;
-        }
-        /* ยกให้หัวตารางที่ถูกล็อกซ้ายสุด อยู่บนสุดเสมอ */
-        thead th.sticky-col, thead th.sticky-col-2 {
-            z-index: 30;
-        }
-        .table-container {
-            max-height: 70vh;
-        }
-        /* ซ่อน Scrollbar แต่อยู่ให้เลื่อนได้ (เพื่อความสวยงาม) */
-        .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-        }
-        .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
+        body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .table-responsive { margin-top: 20px; }
+        th { text-align: center; vertical-align: middle; background-color: #e9ecef !important; }
+        td { vertical-align: middle; }
+        .day-col { text-align: center; font-weight: bold; }
     </style>
 </head>
-<body class="text-gray-800 p-6 md:p-10">
+<body>
 
-    <div class="max-w-screen-2xl mx-auto">
-        <!-- Header -->
-        <div class="mb-8 text-center md:text-left">
-            <h1 class="text-3xl font-bold text-slate-800 mb-2">รายงานสรุปการตรวจสอบฐานข้อมูล</h1>
-            <p class="text-slate-500">รูปแบบแสดงผลแบบ Pivot Table แยกตามบุคคล รายเดือน และช่วงสัปดาห์</p>
-        </div>
-
-        <!-- Controls Section -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row gap-6 items-end">
-            <!-- อัปโหลดไฟล์ -->
-            <div class="flex-1 w-full">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">1. อัปโหลดไฟล์รายงาน (.xls, .xlsx)</label>
-                <div class="relative w-full">
-                    <input type="file" id="uploadFile" accept=".xls, .xlsx, .csv" 
-                           class="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition border border-slate-200 rounded-lg cursor-pointer bg-slate-50"/>
-                </div>
-            </div>
-
-            <!-- ตัวเลือกบุคคล (Filter) -->
-            <div class="flex-1 w-full">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">2. เลือกชื่อผู้ตรวจ (Filter by Person)</label>
-                <select id="personSelect" disabled class="block w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 transition">
-                    <option value="">-- อัปโหลดไฟล์เพื่อเลือกรายชื่อ --</option>
-                </select>
-            </div>
-            
-            <!-- ปุ่มรีเซ็ต -->
-            <div>
-                <button id="resetBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 px-6 rounded-lg transition disabled:opacity-50" disabled>
-                    ล้างข้อมูล
-                </button>
-            </div>
-        </div>
-
-        <!-- Table View Section -->
-        <div id="tableWrapper" class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hidden">
-            <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                <h2 class="font-bold text-slate-700 text-lg">ตารางสรุปผล <span id="currentPersonLabel" class="text-blue-600 font-medium ml-2"></span></h2>
-            </div>
-            
-            <div class="table-container overflow-x-auto scrollbar-hide">
-                <table class="min-w-full border-collapse text-sm text-center">
-                    <thead id="tableHead" class="text-xs text-slate-600 uppercase bg-slate-200 tracking-wider">
-                        <!-- หัวตารางจะถูก Gen ด้วย JavaScript -->
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-100">
-                        <!-- แถวข้อมูลจะถูก Gen ด้วย JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- สถานะโหลด/ไม่มีข้อมูล -->
-        <div id="emptyState" class="bg-white rounded-2xl shadow-sm border border-slate-200 p-12 text-center">
-            <svg class="mx-auto h-12 w-12 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <p class="text-slate-500 font-medium">รอการอัปโหลดไฟล์...</p>
-        </div>
+<div class="container">
+    <h2 class="text-center mb-4 text-primary">ระบบแสดงผลการตรวจฐานข้อมูล</h2>
+    
+    <div class="alert alert-info">
+        <strong>คำแนะนำ:</strong> <br>
+        1. กรุณาล็อกอินที่ <a href="https://www.car.chula.ac.th/dcheck/menu.php" target="_blank">menu.php</a> ก่อน <br>
+        2. ดาวน์โหลดไฟล์จาก <a href="https://www.car.chula.ac.th/dcheck/excel_dcheck.php" target="_blank">excel_dcheck.php</a><br>
+        3. หากไฟล์ชื่อมีช่องว่าง หรือเป็นนามสกุล .xls ให้นำไฟล์นั้นมาอัปโหลดที่ช่องด้านล่างได้เลย
     </div>
 
-    <script>
-        let rawData = [];
-        let personsSet = new Set();
-        
-        // รูปแบบสัปดาห์มาตรฐานที่เราจะใช้จัดกลุ่มตามวันที่
-        const WEEK_RANGES = ["1-7", "8-14", "15-21", "22-28", "29+"];
-        
-        // Map เดือนจากชื่อย่อภาษาไทย เป็น รหัสเดือน_ชื่อเต็ม (เพื่อการเรียงลำดับที่ถูกต้อง)
-        const MONTH_MAP = {
-            'ม.ค.': '01_มกราคม', 'ก.พ.': '02_กุมภาพันธ์', 'มี.ค.': '03_มีนาคม', 'เม.ย.': '04_เมษายน',
-            'พ.ค.': '05_พฤษภาคม', 'มิ.ย.': '06_มิถุนายน', 'ก.ค.': '07_กรกฎาคม', 'ส.ค.': '08_สิงหาคม',
-            'ก.ย.': '09_กันยายน', 'ต.ค.': '10_ตุลาคม', 'พ.ย.': '11_พฤศจิกายน', 'ธ.ค.': '12_ธันวาคม'
+    <div class="mb-3">
+        <label for="excelFile" class="form-label fw-bold">อัปโหลดไฟล์ Excel (.xls, .xlsx)</label>
+        <input class="form-control" type="file" id="excelFile" accept=".xls,.xlsx,.csv">
+    </div>
+
+    <div class="table-responsive" id="tableContainer" style="display: none;">
+        <table class="table table-bordered table-striped table-hover">
+            <thead>
+                <tr>
+                    <th rowspan="2">ชื่อผู้ตรวจ</th>
+                    <th rowspan="2">ฐานที่ตรวจ</th>
+                    <th rowspan="2">เดือน</th>
+                    <th rowspan="2">สัปดาห์ที่</th>
+                    <th colspan="5">จำนวนครั้งที่ตรวจ (จันทร์ - ศุกร์)</th>
+                    <th rowspan="2" class="bg-warning">รวมทั้งหมด</th>
+                </tr>
+                <tr>
+                    <th>จันทร์</th>
+                    <th>อังคาร</th>
+                    <th>พุธ</th>
+                    <th>พฤหัสบดี</th>
+                    <th>ศุกร์</th>
+                </tr>
+            </thead>
+            <tbody id="resultBody">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // ** ข้อควรระวัง: ชื่อคอลัมน์ในโค้ดนี้ต้องตรงกับหัวคอลัมน์ในไฟล์ Excel ของคุณ **
+    // หากใน Excel ชื่อคอลัมน์ต่างไปจากนี้ ให้แก้ตัวแปรด้านล่างให้ตรงกัน
+    const COL_NAME = "ชื่อผู้ตรวจ"; // เปลี่ยนให้ตรงกับ Excel 
+    const COL_DB = "ฐานข้อมูล";    // เปลี่ยนให้ตรงกับ Excel
+    const COL_DATE = "วันที่";      // เปลี่ยนให้ตรงกับ Excel (ควรเป็น format วันที่ที่ระบบอ่านได้)
+
+    document.getElementById('excelFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
+            
+            // อ่านชีตแรก
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            
+            // แปลงข้อมูลเป็น JSON
+            const rawData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
+            
+            processData(rawData);
         };
+        reader.readAsArrayBuffer(file);
+    });
 
-        // DOM Elements
-        const uploadFile = document.getElementById('uploadFile');
-        const personSelect = document.getElementById('personSelect');
-        const resetBtn = document.getElementById('resetBtn');
-        const tableWrapper = document.getElementById('tableWrapper');
-        const emptyState = document.getElementById('emptyState');
-        const tableHead = document.getElementById('tableHead');
-        const tableBody = document.getElementById('tableBody');
-        const currentPersonLabel = document.getElementById('currentPersonLabel');
+    function getWeekOfMonth(date) {
+        const startWeekDayIndex = 1; // 1 = Monday
+        const firstDate = new Date(date.getFullYear(), date.getMonth(), 1);
+        const firstDay = firstDate.getDay();
+        let weekNumber = Math.ceil((date.getDate() + firstDay - 1) / 7);
+        return weekNumber;
+    }
 
-        // ฟังก์ชันอ่านวันที่ไทยและคืนค่าเดือนกับสัปดาห์
-        function parseThaiDate(dateString) {
-            if (!dateString) return null;
-            // ดักจับรูปแบบ "16 ก.ค. 69 09:02 น."
-            const match = dateString.toString().match(/(\d{1,2})\s+([ก-๙\.]+)\s+(\d{2})/);
-            if (!match) return null;
+    function processData(data) {
+        const groupedData = {};
+
+        data.forEach(row => {
+            const name = row[COL_NAME] || "ไม่ระบุชื่อ";
+            const db = row[COL_DB] || "ไม่ระบุฐาน";
+            let dateStr = row[COL_DATE];
             
-            const day = parseInt(match[1], 10);
-            const monthText = match[2];
-            
-            let week = "";
-            if (day <= 7) week = "1-7";
-            else if (day <= 14) week = "8-14";
-            else if (day <= 21) week = "15-21";
-            else if (day <= 28) week = "22-28";
-            else week = "29+";
+            if(!dateStr) return; // ข้ามบรรทัดที่ไม่มีวันที่
 
-            return {
-                monthCode: MONTH_MAP[monthText] || monthText, // เช่น '07_กรกฎาคม'
-                week: week
-            };
-        }
+            const dateObj = new Date(dateStr);
+            if (isNaN(dateObj.getTime())) return; // ข้ามถ้ารูปแบบวันที่ไม่ถูกต้อง
 
-        // จัดการเหตุการณ์เมื่ออัปโหลดไฟล์
-        uploadFile.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
+            const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+            const month = monthNames[dateObj.getMonth()] + " " + (dateObj.getFullYear() + 543); // แปลงเป็น พ.ศ.
+            const week = getWeekOfMonth(dateObj);
+            const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
 
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                try {
-                    const data = event.target.result;
-                    // ใช้ type: 'binary' เพื่อให้อ่านไฟล์ HTML-based XLS ได้
-                    const workbook = XLSX.read(data, { type: 'binary' });
-                    const sheetName = workbook.SheetNames[0];
-                    const sheet = workbook.Sheets[sheetName];
-                    
-                    // แปลง Sheet เป็น JSON
-                    rawData = XLSX.utils.sheet_to_json(sheet, { raw: false });
-                    
-                    // รวบรวมชื่อผู้ตรวจทั้งหมด
-                    personsSet.clear();
-                    rawData.forEach(row => {
-                        const personName = row['ชื่อผู้ตรวจ']?.toString().trim();
-                        if (personName) personsSet.add(personName);
-                    });
+            // กรองเฉพาะ จันทร์ (1) ถึง ศุกร์ (5)
+            if (dayOfWeek < 1 || dayOfWeek > 5) return; 
 
-                    // อัปเดต Dropdown
-                    updatePersonDropdown();
-                    
-                    // เปิดปุ่มใช้งาน
-                    personSelect.disabled = false;
-                    resetBtn.disabled = false;
-                    
-                    // ซ่อนหน้าว่างและแสดงตารางของคนแรก(ถ้ามี)
-                    emptyState.classList.add('hidden');
-                    tableWrapper.classList.remove('hidden');
-                    
-                    if (personsSet.size > 0) {
-                        personSelect.value = Array.from(personsSet)[0];
-                        generatePivotTable(personSelect.value);
-                    }
-                } catch (error) {
-                    alert("เกิดข้อผิดพลาดในการอ่านไฟล์ โปรดตรวจสอบว่าเป็นไฟล์ Excel ที่ถูกต้อง");
-                    console.error(error);
-                }
-            };
-            reader.readAsBinaryString(file);
-        });
+            // สร้าง Key สำหรับจัดกลุ่ม
+            const groupKey = `${name}|${db}|${month}|${week}`;
 
-        // จัดการเมื่อเปลี่ยนบุคคล
-        personSelect.addEventListener('change', function() {
-            generatePivotTable(this.value);
-        });
-
-        // ปุ่มเคลียร์
-        resetBtn.addEventListener('click', function() {
-            uploadFile.value = '';
-            rawData = [];
-            personSelect.innerHTML = '<option value="">-- อัปโหลดไฟล์เพื่อเลือกรายชื่อ --</option>';
-            personSelect.disabled = true;
-            resetBtn.disabled = true;
-            tableWrapper.classList.add('hidden');
-            emptyState.classList.remove('hidden');
-        });
-
-        // ฟังก์ชันอัปเดตตัวเลือกบุคคล
-        function updatePersonDropdown() {
-            personSelect.innerHTML = '<option value="ALL">-- ดูสรุปข้อมูลทุกคนรวมกัน --</option>';
-            const sortedPersons = Array.from(personsSet).sort();
-            sortedPersons.forEach(person => {
-                const opt = document.createElement('option');
-                opt.value = person;
-                opt.textContent = person;
-                personSelect.appendChild(opt);
-            });
-        }
-
-        // ฟังก์ชันหลัก: สร้าง Pivot Table
-        function generatePivotTable(personName) {
-            currentPersonLabel.textContent = personName === "ALL" ? "(ทุกคนรวมกัน)" : `(${personName})`;
-            
-            // กรองข้อมูลตามคน
-            const filteredData = personName === "ALL" 
-                ? rawData 
-                : rawData.filter(row => row['ชื่อผู้ตรวจ']?.toString().trim() === personName);
-
-            // โครงสร้าง Pivot: pivotData[dbName][monthCode][weekRange] = count
-            const pivotData = {};
-            const availableMonths = new Set();
-
-            filteredData.forEach(row => {
-                const dbName = row['ชื่อฐานข้อมูล']?.toString().trim();
-                const dateString = row['วันที่'] || row['Date'];
-                
-                if (!dbName || !dateString) return;
-
-                const dateInfo = parseThaiDate(dateString);
-                if (!dateInfo) return;
-
-                availableMonths.add(dateInfo.monthCode);
-
-                if (!pivotData[dbName]) pivotData[dbName] = {};
-                if (!pivotData[dbName][dateInfo.monthCode]) pivotData[dbName][dateInfo.monthCode] = {};
-                
-                // นับจำนวนการใช้งาน (Hits) เป็น 1 ต่อเรคคอร์ด
-                pivotData[dbName][dateInfo.monthCode][dateInfo.week] = (pivotData[dbName][dateInfo.monthCode][dateInfo.week] || 0) + 1;
-            });
-
-            const sortedMonths = Array.from(availableMonths).sort();
-            const sortedDBs = Object.keys(pivotData).sort();
-
-            renderTable(sortedMonths, sortedDBs, pivotData);
-        }
-
-        // ฟังก์ชันเรนเดอร์ลง HTML Table
-        function renderTable(months, dbs, pivotData) {
-            // 1. สร้าง Thead
-            tableHead.innerHTML = '';
-            
-            // แถวที่ 1 (เดือน)
-            let tr1 = `<tr class="border-b-2 border-slate-300">
-                <th class="sticky-col py-3 px-4 w-16 border-r border-slate-300">ลำดับ</th>
-                <th class="sticky-col-2 py-3 px-4 text-left border-r border-slate-300 w-64">ฐานข้อมูล / เดือน</th>`;
-            
-            months.forEach(m => {
-                const monthName = m.split('_')[1]; // ดึงชื่อเดือนออกมาแสดง
-                tr1 += `<th colspan="5" class="py-3 px-4 border-r border-slate-300 text-center font-bold text-slate-700 bg-slate-200">${monthName}</th>`;
-            });
-            tr1 += `</tr>`;
-
-            // แถวที่ 2 (สัปดาห์)
-            let tr2 = `<tr class="border-b border-slate-300 text-[11px]">
-                <th class="sticky-col py-2 px-2 border-r border-slate-300 bg-slate-100"></th>
-                <th class="sticky-col-2 py-2 px-2 border-r border-slate-300 bg-slate-100"></th>`;
-            
-            months.forEach(() => {
-                WEEK_RANGES.forEach(w => {
-                    tr2 += `<th class="py-2 px-1 border-r border-slate-200 bg-slate-100 min-w-[45px]">${w}</th>`;
-                });
-            });
-            tr2 += `</tr>`;
-            
-            tableHead.innerHTML = tr1 + tr2;
-
-            // 2. สร้าง Tbody
-            tableBody.innerHTML = '';
-            if (dbs.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="${2 + (months.length * 5)}" class="py-8 text-slate-400">ไม่พบข้อมูลการตรวจ</td></tr>`;
-                return;
+            if (!groupedData[groupKey]) {
+                groupedData[groupKey] = {
+                    name: name,
+                    db: db,
+                    month: month,
+                    week: week,
+                    days: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+                };
             }
 
-            dbs.forEach((db, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-blue-50 transition duration-150 ease-in-out group";
+            // บวกจำนวนครั้งที่ตรวจในวันนั้นๆ
+            groupedData[groupKey].days[dayOfWeek]++;
+        });
 
-                let rowHTML = `
-                    <td class="sticky-col py-3 px-4 border-r border-slate-200 bg-white group-hover:bg-blue-50 text-slate-500 font-medium">${index + 1}</td>
-                    <td class="sticky-col-2 py-3 px-4 border-r border-slate-200 bg-white group-hover:bg-blue-50 text-left font-semibold text-slate-800">${db}</td>
-                `;
+        renderTable(groupedData);
+    }
 
-                months.forEach(m => {
-                    WEEK_RANGES.forEach(w => {
-                        const val = pivotData[db][m]?.[w] || 0;
-                        const cellText = val > 0 ? val : '<span class="text-slate-300">-</span>';
-                        rowHTML += `<td class="py-3 px-1 border-r border-slate-200 ${val > 0 ? 'font-semibold text-blue-700 bg-blue-50/50' : 'text-slate-400'}">${cellText}</td>`;
-                    });
-                });
+    function renderTable(groupedData) {
+        const tbody = document.getElementById('resultBody');
+        tbody.innerHTML = "";
 
-                tr.innerHTML = rowHTML;
-                tableBody.appendChild(tr);
-            });
+        let hasData = false;
+
+        for (const key in groupedData) {
+            hasData = true;
+            const row = groupedData[key];
+            const tr = document.createElement('tr');
+            
+            const total = row.days[1] + row.days[2] + row.days[3] + row.days[4] + row.days[5];
+
+            tr.innerHTML = `
+                <td>${row.name}</td>
+                <td>${row.db}</td>
+                <td>${row.month}</td>
+                <td class="text-center">สัปดาห์ที่ ${row.week}</td>
+                <td class="day-col text-primary">${row.days[1] > 0 ? row.days[1] : '-'}</td>
+                <td class="day-col text-primary">${row.days[2] > 0 ? row.days[2] : '-'}</td>
+                <td class="day-col text-primary">${row.days[3] > 0 ? row.days[3] : '-'}</td>
+                <td class="day-col text-primary">${row.days[4] > 0 ? row.days[4] : '-'}</td>
+                <td class="day-col text-primary">${row.days[5] > 0 ? row.days[5] : '-'}</td>
+                <td class="day-col bg-warning text-dark">${total}</td>
+            `;
+            tbody.appendChild(tr);
         }
-    </script>
+
+        if (!hasData) {
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">ไม่พบข้อมูล หรือรูปแบบคอลัมน์ไม่ถูกต้อง</td></tr>`;
+        }
+
+        document.getElementById('tableContainer').style.display = "block";
+    }
+</script>
+
 </body>
 </html>
