@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รายงานฐานข้อมูล (Database Check)</title>
+    <style>
+        body {
+            font-family: 'Sarabun', Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f7f6;
+        }
+        .filter-container {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .filter-group label {
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .filter-group input, .filter-group select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #0056b3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 18px;
+        }
+        button:hover {
+            background-color: #004494;
+        }
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        th, td {
+            border: 1px solid #a0a0a0;
+            padding: 8px 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #e0e0e0;
+            font-weight: bold;
+        }
+        .text-left {
+            text-align: left;
+        }
+        /* Sticky Header */
+        thead th:nth-child(1), thead th:nth-child(2) {
+            position: sticky;
+            left: 0;
+            z-index: 2;
+            background-color: #e0e0e0;
+        }
+        tbody td:nth-child(1), tbody td:nth-child(2) {
+            position: sticky;
+            left: 0;
+            background-color: #fff;
+            z-index: 1;
+        }
+        tbody td:nth-child(2) {
+            left: 50px; /* ปรับตามความกว้างคอลัมน์ลำดับ */
+        }
+    </style>
+</head>
+<body>
+
+    <h2>รายงานการเข้าใช้ฐานข้อมูล</h2>
+
+    <div class="filter-container">
+        <div class="filter-group">
+            <label>ปี</label>
+            <select id="filter-year">
+                <option value="">ทั้งหมด</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>เดือน</label>
+            <select id="filter-month">
+                <option value="">ทั้งหมด</option>
+                <option value="กรกฎาคม">กรกฎาคม</option>
+                <option value="สิงหาคม">สิงหาคม</option>
+                <option value="กันยายน">กันยายน</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>ค้นหาชื่อฐานข้อมูล</label>
+            <input type="text" id="filter-db" placeholder="เช่น Business Source...">
+        </div>
+        <div class="filter-group">
+            <label>ค้นหาชื่อบุคคล</label>
+            <input type="text" id="filter-person" placeholder="ค้นหาชื่อ...">
+        </div>
+        <button onclick="applyFilters()">ค้นหา</button>
+    </div>
+
+    <div class="table-container">
+        <table id="dataTable">
+            <thead id="table-head">
+                </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
+
+    <script>
+        // โครงสร้างข้อมูลจำลอง (Mock Data) ที่ควรจะได้จากการ Fetch API
+        const mockData = [
+            { id: 1, dbName: "Business Source Complete", person: "สมชาย", data: { "กรกฎาคม": {"30-4": 0, "7-11": 0, "14-18": 0}, "สิงหาคม": {"4-8": 3, "11-15": 1} } },
+            { id: 2, dbName: "Emerald Management", person: "สมศรี", data: { "กรกฎาคม": {"30-4": 0, "7-11": 0, "14-18": 0}, "สิงหาคม": {"4-8": 3, "11-15": 1} } },
+            { id: 3, dbName: "Journal Citation Reports", person: "สมชาย", data: { "กรกฎาคม": {"30-4": 0, "7-11": 0, "14-18": 0}, "สิงหาคม": {"4-8": 3, "11-15": 1} } }
+        ];
+
+        // รายการเดือนและสัปดาห์ (เพื่อใช้สร้าง Header ตาราง)
+        const timeline = {
+            "กรกฎาคม": ["30-4", "7-11", "14-18", "21-25", "28-1"],
+            "สิงหาคม": ["4-8", "11-15", "18-22", "25-29"]
+        };
+
+        let currentData = mockData;
+
+        // ฟังก์ชันดึงข้อมูลจาก URL จริง (คอมเมนต์ไว้เป็นตัวอย่าง)
+        /*
+        async function fetchData() {
+            try {
+                const response = await fetch('https://www.car.chula.ac.th/dcheck/excel_dcheck.php');
+                const data = await response.json(); 
+                // นำ data มาจัดฟอร์แมตให้เข้ากับรูปแบบที่โค้ดนี้ใช้
+                currentData = formatData(data); 
+                renderTable();
+            } catch (error) {
+                console.error("เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
+            }
+        }
+        */
+
+        function renderTable() {
+            const thead = document.getElementById('table-head');
+            const tbody = document.getElementById('table-body');
+            
+            // ล้างข้อมูลเก่า
+            thead.innerHTML = '';
+            tbody.innerHTML = '';
+
+            // ตรวจสอบ Filter เดือนว่าถูกเลือกหรือไม่
+            const selectedMonth = document.getElementById('filter-month').value;
+            let activeMonths = selectedMonth ? { [selectedMonth]: timeline[selectedMonth] } : timeline;
+
+            // 1. สร้าง Header Row 1 (เดือน)
+            let tr1 = document.createElement('tr');
+            tr1.innerHTML = `<th rowspan="2" style="width: 50px;">ลำดับ</th><th rowspan="2" style="width: 250px;">ฐานข้อมูล</th>`;
+            
+            // 2. สร้าง Header Row 2 (สัปดาห์)
+            let tr2 = document.createElement('tr');
+
+            for (const [month, weeks] of Object.entries(activeMonths)) {
+                if(!weeks) continue;
+                tr1.innerHTML += `<th colspan="${weeks.length}">${month}</th>`;
+                weeks.forEach(week => {
+                    tr2.innerHTML += `<th>${week}</th>`;
+                });
+            }
+            thead.appendChild(tr1);
+            thead.appendChild(tr2);
+
+            // 3. สร้าง Body Data
+            if (currentData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="100%">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+                return;
+            }
+
+            currentData.forEach((row, index) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `<td>${index + 1}</td><td class="text-left">${row.dbName} <br><small style="color:gray;">ผู้รับผิดชอบ: ${row.person}</small></td>`;
+                
+                for (const [month, weeks] of Object.entries(activeMonths)) {
+                    if(!weeks) continue;
+                    weeks.forEach(week => {
+                        // ดึงค่าตามเดือนและสัปดาห์ ถ้าไม่มีให้เป็น '-'
+                        let value = (row.data[month] && row.data[month][week] !== undefined) ? row.data[month][week] : 0;
+                        tr.innerHTML += `<td>${value}</td>`;
+                    });
+                }
+                tbody.appendChild(tr);
+            });
+        }
+
+        // ฟังก์ชันสำหรับการค้นหา / กรองข้อมูล
+        function applyFilters() {
+            const filterDb = document.getElementById('filter-db').value.toLowerCase();
+            const filterPerson = document.getElementById('filter-person').value.toLowerCase();
+            // การกรองเดือนจะไปมีผลตอน renderTable ในตัวแปร activeMonths
+
+            currentData = mockData.filter(item => {
+                const matchDb = item.dbName.toLowerCase().includes(filterDb);
+                const matchPerson = item.person.toLowerCase().includes(filterPerson);
+                return matchDb && matchPerson;
+            });
+
+            renderTable();
+        }
+
+        // เริ่มต้นการทำงาน
+        window.onload = () => {
+            renderTable();
+            // fetchData(); // หากพร้อมใช้งาน API จริง ให้เรียกใช้บรรทัดนี้
+        };
+    </script>
+</body>
+</html>
