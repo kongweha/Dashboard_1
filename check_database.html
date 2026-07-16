@@ -3,36 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบรายงานผลการตรวจฐานข้อมูล</title>
+    <title>สรุปผลการตรวจฐานข้อมูล</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: 'Sarabun', sans-serif; background-color: #f8f9fa; padding: 20px; }
         .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .table-responsive { margin-top: 20px; }
         th { text-align: center; vertical-align: middle; background-color: #e9ecef !important; }
         td { vertical-align: middle; }
-        .day-col { text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 class="text-center mb-4 text-primary">ระบบแสดงผลการตรวจฐานข้อมูล</h2>
+    <h3 class="mb-4 text-primary text-center">ระบบสรุปผลการตรวจฐานข้อมูล</h3>
     
-    <div class="alert alert-info">
-        <strong>คำแนะนำ:</strong> <br>
-        1. กรุณาล็อกอินที่ <a href="https://www.car.chula.ac.th/dcheck/menu.php" target="_blank">menu.php</a> ก่อน <br>
-        2. ดาวน์โหลดไฟล์จาก <a href="https://www.car.chula.ac.th/dcheck/excel_dcheck.php" target="_blank">excel_dcheck.php</a><br>
-        3. หากไฟล์ชื่อมีช่องว่าง หรือเป็นนามสกุล .xls ให้นำไฟล์นั้นมาอัปโหลดที่ช่องด้านล่างได้เลย
+    <div class="mb-4">
+        <label for="csvFile" class="form-label fw-bold">อัปโหลดไฟล์ที่โหลดมาจากระบบ (เลือกไฟล์ .csv)</label>
+        <input type="file" id="csvFile" accept=".csv" class="form-control">
     </div>
 
-    <div class="mb-3">
-        <label for="excelFile" class="form-label fw-bold">อัปโหลดไฟล์ Excel (.xls, .xlsx)</label>
-        <input class="form-control" type="file" id="excelFile" accept=".xls,.xlsx,.csv">
-    </div>
-
-    <div class="table-responsive" id="tableContainer" style="display: none;">
+    <div class="table-responsive" id="tableContainer" style="display:none;">
         <table class="table table-bordered table-striped table-hover">
             <thead>
                 <tr>
@@ -40,133 +31,145 @@
                     <th rowspan="2">ฐานที่ตรวจ</th>
                     <th rowspan="2">เดือน</th>
                     <th rowspan="2">สัปดาห์ที่</th>
-                    <th colspan="5">จำนวนครั้งที่ตรวจ (จันทร์ - ศุกร์)</th>
+                    <th colspan="5">จำนวนครั้ง (จันทร์ - ศุกร์)</th>
                     <th rowspan="2" class="bg-warning">รวมทั้งหมด</th>
                 </tr>
                 <tr>
-                    <th>จันทร์</th>
-                    <th>อังคาร</th>
-                    <th>พุธ</th>
-                    <th>พฤหัสบดี</th>
-                    <th>ศุกร์</th>
+                    <th>จ.</th>
+                    <th>อ.</th>
+                    <th>พ.</th>
+                    <th>พฤ.</th>
+                    <th>ศ.</th>
                 </tr>
             </thead>
-            <tbody id="resultBody">
-                </tbody>
+            <tbody id="resultBody"></tbody>
         </table>
     </div>
 </div>
 
 <script>
-    // ** ข้อควรระวัง: ชื่อคอลัมน์ในโค้ดนี้ต้องตรงกับหัวคอลัมน์ในไฟล์ Excel ของคุณ **
-    // หากใน Excel ชื่อคอลัมน์ต่างไปจากนี้ ให้แก้ตัวแปรด้านล่างให้ตรงกัน
-    const COL_NAME = "ชื่อผู้ตรวจ"; // เปลี่ยนให้ตรงกับ Excel 
-    const COL_DB = "ฐานข้อมูล";    // เปลี่ยนให้ตรงกับ Excel
-    const COL_DATE = "วันที่";      // เปลี่ยนให้ตรงกับ Excel (ควรเป็น format วันที่ที่ระบบอ่านได้)
+    // สร้างแผนที่แปลเดือนภาษาไทยย่อ ให้เป็นตัวเลขเดือน (0-11)
+    const thaiMonths = {
+        "ม.ค.":0, "ก.พ.":1, "มี.ค.":2, "เม.ย.":3, "พ.ค.":4, "มิ.ย.":5,
+        "ก.ค.":6, "ส.ค.":7, "ก.ย.":8, "ต.ค.":9, "พ.ย.":10, "ธ.ค.":11
+    };
+    const fullMonths = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
 
-    document.getElementById('excelFile').addEventListener('change', function(e) {
+    // ฟังก์ชันแปลงวันที่รูปแบบ "16 ก.ค. 69 09:02 น." ให้เป็น Date Object
+    function parseThaiDate(dateStr) {
+        if (!dateStr) return null;
+        const parts = dateStr.split(' ');
+        if (parts.length < 3) return null;
+        
+        const day = parseInt(parts[0], 10);
+        const month = thaiMonths[parts[1]];
+        let yearStr = parts[2];
+        
+        // ถ้าปีมาแบบ 2 หลัก (เช่น 69) ให้เติม 25 เข้าไปข้างหน้า
+        if (yearStr.length === 2) yearStr = "25" + yearStr; 
+        
+        // แปลง พ.ศ. เป็น ค.ศ.
+        const yearCE = parseInt(yearStr, 10) - 543;
+
+        if (isNaN(day) || month === undefined || isNaN(yearCE)) return null;
+        
+        return new Date(yearCE, month, day);
+    }
+
+    function getWeekOfMonth(date) {
+        const firstDate = new Date(date.getFullYear(), date.getMonth(), 1);
+        const firstDay = firstDate.getDay();
+        return Math.ceil((date.getDate() + firstDay - 1) / 7);
+    }
+
+    document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
 
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-            
-            // อ่านชีตแรก
-            const firstSheetName = workbook.SheetNames[0];
-            const worksheet = workbook.Sheets[firstSheetName];
-            
-            // แปลงข้อมูลเป็น JSON
-            const rawData = XLSX.utils.sheet_to_json(worksheet, { raw: false, dateNF: 'yyyy-mm-dd' });
-            
-            processData(rawData);
-        };
-        reader.readAsArrayBuffer(file);
+        // ใช้ PapaParse อ่านไฟล์ CSV ซึ่งจะไวมาก
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                processData(results.data);
+            }
+        });
     });
 
-    function getWeekOfMonth(date) {
-        const startWeekDayIndex = 1; // 1 = Monday
-        const firstDate = new Date(date.getFullYear(), date.getMonth(), 1);
-        const firstDay = firstDate.getDay();
-        let weekNumber = Math.ceil((date.getDate() + firstDay - 1) / 7);
-        return weekNumber;
-    }
-
     function processData(data) {
-        const groupedData = {};
-
+        const grouped = {};
+        
         data.forEach(row => {
-            const name = row[COL_NAME] || "ไม่ระบุชื่อ";
-            const db = row[COL_DB] || "ไม่ระบุฐาน";
-            let dateStr = row[COL_DATE];
+            // ดึงชื่อคอลัมน์ตามไฟล์ที่แนบมาเป๊ะๆ
+            const name = row['ชื่อผู้ตรวจ'];
+            const db = row['ชื่อฐานข้อมูล'];
+            const dateStr = row['วันที่'];
             
-            if(!dateStr) return; // ข้ามบรรทัดที่ไม่มีวันที่
+            if (!name || !db || !dateStr) return;
 
-            const dateObj = new Date(dateStr);
-            if (isNaN(dateObj.getTime())) return; // ข้ามถ้ารูปแบบวันที่ไม่ถูกต้อง
+            const dateObj = parseThaiDate(dateStr);
+            if (!dateObj) return;
 
-            const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-            const month = monthNames[dateObj.getMonth()] + " " + (dateObj.getFullYear() + 543); // แปลงเป็น พ.ศ.
-            const week = getWeekOfMonth(dateObj);
-            const dayOfWeek = dateObj.getDay(); // 0 = Sun, 1 = Mon, ..., 5 = Fri, 6 = Sat
-
-            // กรองเฉพาะ จันทร์ (1) ถึง ศุกร์ (5)
+            const dayOfWeek = dateObj.getDay();
+            
+            // กรองเฉพาะ จันทร์ (1) ถึง ศุกร์ (5) เท่านั้น
             if (dayOfWeek < 1 || dayOfWeek > 5) return; 
 
-            // สร้าง Key สำหรับจัดกลุ่ม
-            const groupKey = `${name}|${db}|${month}|${week}`;
-
-            if (!groupedData[groupKey]) {
-                groupedData[groupKey] = {
-                    name: name,
-                    db: db,
-                    month: month,
-                    week: week,
-                    days: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+            const monthStr = fullMonths[dateObj.getMonth()] + " " + (dateObj.getFullYear() + 543);
+            const weekNum = getWeekOfMonth(dateObj);
+            
+            // สร้างคีย์เพื่อรวมข้อมูลซ้ำเข้าด้วยกัน
+            const key = `${name}|${db}|${monthStr}|${weekNum}`;
+            
+            if (!grouped[key]) {
+                grouped[key] = { 
+                    name: name, 
+                    db: db, 
+                    month: monthStr, 
+                    week: weekNum, 
+                    days: {1:0, 2:0, 3:0, 4:0, 5:0} 
                 };
             }
-
-            // บวกจำนวนครั้งที่ตรวจในวันนั้นๆ
-            groupedData[groupKey].days[dayOfWeek]++;
+            
+            // บวกจำนวนครั้งในวันนั้น
+            grouped[key].days[dayOfWeek]++;
         });
 
-        renderTable(groupedData);
+        renderTable(grouped);
     }
 
-    function renderTable(groupedData) {
+    function renderTable(grouped) {
         const tbody = document.getElementById('resultBody');
         tbody.innerHTML = "";
-
+        
         let hasData = false;
 
-        for (const key in groupedData) {
+        for (const key in grouped) {
             hasData = true;
-            const row = groupedData[key];
-            const tr = document.createElement('tr');
-            
+            const row = grouped[key];
             const total = row.days[1] + row.days[2] + row.days[3] + row.days[4] + row.days[5];
-
+            
+            const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${row.name}</td>
                 <td>${row.db}</td>
                 <td>${row.month}</td>
-                <td class="text-center">สัปดาห์ที่ ${row.week}</td>
-                <td class="day-col text-primary">${row.days[1] > 0 ? row.days[1] : '-'}</td>
-                <td class="day-col text-primary">${row.days[2] > 0 ? row.days[2] : '-'}</td>
-                <td class="day-col text-primary">${row.days[3] > 0 ? row.days[3] : '-'}</td>
-                <td class="day-col text-primary">${row.days[4] > 0 ? row.days[4] : '-'}</td>
-                <td class="day-col text-primary">${row.days[5] > 0 ? row.days[5] : '-'}</td>
-                <td class="day-col bg-warning text-dark">${total}</td>
+                <td class="text-center">${row.week}</td>
+                <td class="text-center text-primary fw-bold">${row.days[1] > 0 ? row.days[1] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${row.days[2] > 0 ? row.days[2] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${row.days[3] > 0 ? row.days[3] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${row.days[4] > 0 ? row.days[4] : '-'}</td>
+                <td class="text-center text-primary fw-bold">${row.days[5] > 0 ? row.days[5] : '-'}</td>
+                <td class="text-center bg-warning text-dark fw-bold">${total}</td>
             `;
             tbody.appendChild(tr);
         }
 
         if (!hasData) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">ไม่พบข้อมูล หรือรูปแบบคอลัมน์ไม่ถูกต้อง</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="text-center text-danger">ไม่พบข้อมูลที่ตรงเงื่อนไข หรือรูปแบบไฟล์ไม่ถูกต้อง</td></tr>`;
         }
 
-        document.getElementById('tableContainer').style.display = "block";
+        document.getElementById('tableContainer').style.display = 'block';
     }
 </script>
 
