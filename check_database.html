@@ -3,237 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>รายงานฐานข้อมูล (Database Check)</title>
+    <title>รายงานการเข้าใช้ฐานข้อมูล (Dynamic Calendar)</title>
     <style>
-        body {
-            font-family: 'Sarabun', Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f7f6;
-        }
-        .filter-container {
-            background-color: #fff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .filter-group label {
-            font-size: 12px;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-        .filter-group input, .filter-group select {
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            min-width: 150px;
-        }
-        button {
-            padding: 8px 15px;
-            background-color: #0056b3;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 18px;
-        }
-        button:hover {
-            background-color: #004494;
-        }
-        .table-container {
-            width: 100%;
-            overflow-x: auto;
-            background-color: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            white-space: nowrap;
-        }
-        th, td {
-            border: 1px solid #a0a0a0;
-            padding: 8px 10px;
-            text-align: center;
-        }
-        th {
-            background-color: #e0e0e0;
-            font-weight: bold;
-        }
-        .text-left {
-            text-align: left;
-        }
-        /* Sticky Header */
-        thead th:nth-child(1), thead th:nth-child(2) {
-            position: sticky;
-            left: 0;
-            z-index: 2;
-            background-color: #e0e0e0;
-        }
-        tbody td:nth-child(1), tbody td:nth-child(2) {
-            position: sticky;
-            left: 0;
-            background-color: #fff;
-            z-index: 1;
-        }
-        tbody td:nth-child(2) {
-            left: 50px; /* ปรับตามความกว้างคอลัมน์ลำดับ */
-        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 20px; background-color: #f8f9fa; color: #333; }
+        h2 { text-align: center; color: #2c3e50; }
+        .filter-section { background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; }
+        .filter-group label { font-size: 13px; font-weight: 600; margin-bottom: 5px; color: #555; }
+        .filter-group input, .filter-group select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; min-width: 160px; outline: none; }
+        .filter-group input:focus, .filter-group select:focus { border-color: #007bff; }
+        button.btn-search { padding: 9px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        button.btn-search:hover { background-color: #0056b3; }
+        .table-responsive { width: 100%; overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); max-height: 70vh; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; white-space: nowrap; font-size: 13px; }
+        th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: center; }
+        th { background-color: #e9ecef; font-weight: bold; color: #495057; }
+        .text-left { text-align: left; }
+        tbody tr:hover { background-color: #f1f1f1; }
+        thead th:nth-child(1), thead th:nth-child(2) { position: sticky; left: 0; z-index: 3; background-color: #e9ecef; }
+        tbody td:nth-child(1), tbody td:nth-child(2) { position: sticky; left: 0; z-index: 1; background-color: #fff; }
+        thead th:nth-child(2), tbody td:nth-child(2) { left: 50px; }
+        thead tr:nth-child(1) th { position: sticky; top: 0; z-index: 4; }
+        thead tr:nth-child(2) th { position: sticky; top: 35px; z-index: 2; }
+        thead tr:nth-child(1) th:nth-child(1), thead tr:nth-child(1) th:nth-child(2) { z-index: 5; }
     </style>
 </head>
 <body>
 
-    <h2>รายงานการเข้าใช้ฐานข้อมูล</h2>
+    <h2>รายงานตรวจสอบการเข้าใช้งานฐานข้อมูล (อัปเดตปฏิทินจริง)</h2>
 
-    <div class="filter-container">
+    <div class="filter-section">
         <div class="filter-group">
-            <label>ปี</label>
-            <select id="filter-year">
-                <option value="">ทั้งหมด</option>
-                <option value="2023">2023</option>
-                <option value="2024">2024</option>
-            </select>
+            <label>ปี (ค.ศ.)</label>
+            <select id="filter-year" onchange="onYearChange()"></select>
         </div>
         <div class="filter-group">
             <label>เดือน</label>
             <select id="filter-month">
-                <option value="">ทั้งหมด</option>
-                <option value="กรกฎาคม">กรกฎาคม</option>
-                <option value="สิงหาคม">สิงหาคม</option>
-                <option value="กันยายน">กันยายน</option>
-            </select>
+                <option value="">-- แสดงทุกเดือน --</option>
+                </select>
         </div>
         <div class="filter-group">
             <label>ค้นหาชื่อฐานข้อมูล</label>
             <input type="text" id="filter-db" placeholder="เช่น Business Source...">
         </div>
         <div class="filter-group">
-            <label>ค้นหาชื่อบุคคล</label>
+            <label>ผู้รับผิดชอบ</label>
             <input type="text" id="filter-person" placeholder="ค้นหาชื่อ...">
         </div>
-        <button onclick="applyFilters()">ค้นหา</button>
+        <button class="btn-search" onclick="applyFilters()">กรองข้อมูล</button>
     </div>
 
-    <div class="table-container">
-        <table id="dataTable">
-            <thead id="table-head">
-                </thead>
-            <tbody id="table-body">
-                </tbody>
+    <div class="table-responsive">
+        <table id="main-table">
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
         </table>
     </div>
 
     <script>
-        // โครงสร้างข้อมูลจำลอง (Mock Data) ที่ควรจะได้จากการ Fetch API
-        const mockData = [
-            { id: 1, dbName: "Business Source Complete", person: "สมชาย", data: { "กรกฎาคม": {"30-4": 0, "7-11": 0, "14-18": 0}, "สิงหาคม": {"4-8": 3, "11-15": 1} } },
-            { id: 2, dbName: "Emerald Management", person: "สมศรี", data: { "กรกฎาคม": {"30-4": 0, "7-11": 0, "14-18": 0}, "สิงหาคม": {"4-8": 3, "11-15": 1} } },
-            { id: 3, dbName: "Journal Citation Reports", person: "สมชาย", data: { "กรกฎาคม": {"30-4": 0, "7-11": 0, "14-18": 0}, "สิงหาคม": {"4-8": 3, "11-15": 1} } }
-        ];
+        const monthNames = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        let timeline = {};
+        let rawData = [];
+        let filteredData = [];
 
-        // รายการเดือนและสัปดาห์ (เพื่อใช้สร้าง Header ตาราง)
-        const timeline = {
-            "กรกฎาคม": ["30-4", "7-11", "14-18", "21-25", "28-1"],
-            "สิงหาคม": ["4-8", "11-15", "18-22", "25-29"]
-        };
-
-        let currentData = mockData;
-
-        // ฟังก์ชันดึงข้อมูลจาก URL จริง (คอมเมนต์ไว้เป็นตัวอย่าง)
-        /*
-        async function fetchData() {
-            try {
-                const response = await fetch('https://www.car.chula.ac.th/dcheck/excel_dcheck.php');
-                const data = await response.json(); 
-                // นำ data มาจัดฟอร์แมตให้เข้ากับรูปแบบที่โค้ดนี้ใช้
-                currentData = formatData(data); 
-                renderTable();
-            } catch (error) {
-                console.error("เกิดข้อผิดพลาดในการดึงข้อมูล:", error);
+        // 1. ฟังก์ชันสร้างตัวเลือกปี (ย้อนหลัง 3 ปี ถึง ปีปัจจุบัน)
+        function initYearDropdown() {
+            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('filter-year');
+            yearSelect.innerHTML = '';
+            for (let y = currentYear - 3; y <= currentYear + 1; y++) {
+                let option = document.createElement('option');
+                option.value = y;
+                option.text = y;
+                if (y === currentYear) option.selected = true;
+                yearSelect.appendChild(option);
             }
         }
-        */
 
+        // 2. ฟังก์ชันคำนวณสัปดาห์ (จันทร์-ศุกร์) ตามปีปฏิทินจริง
+        function generateTimelineByYear(year) {
+            let newTimeline = {};
+            // หาวันที่ 1 มกราคม ของปีนั้น
+            let currentDate = new Date(year, 0, 1);
+            
+            // ปรับถอยไปหาวันจันทร์แรกของสัปดาห์นั้น
+            let dayOfWeek = currentDate.getDay(); // 0 = อา, 1 = จ, ... 6 = ส
+            let diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            currentDate = new Date(currentDate.setDate(diff));
+
+            // ลูปสร้างสัปดาห์จนกว่าจะหมดปี
+            while (currentDate.getFullYear() <= year) {
+                let startDay = currentDate.getDate();
+                
+                // หาวันศุกร์ของสัปดาห์นี้
+                let fridayDate = new Date(currentDate);
+                fridayDate.setDate(currentDate.getDate() + 4);
+                let endDay = fridayDate.getDate();
+
+                // ใช้วันพฤหัสเป็นเกณฑ์ว่าสัปดาห์นี้ตกอยู่ในเดือนอะไร (มาตรฐาน ISO)
+                let thursdayDate = new Date(currentDate);
+                thursdayDate.setDate(currentDate.getDate() + 3);
+                
+                if (thursdayDate.getFullYear() === parseInt(year)) {
+                    let monthName = monthNames[thursdayDate.getMonth()];
+                    if (!newTimeline[monthName]) newTimeline[monthName] = [];
+                    newTimeline[monthName].push(`${startDay}-${endDay}`);
+                }
+                
+                // เลื่อนไปวันจันทร์ถัดไป (+7 วัน)
+                currentDate.setDate(currentDate.getDate() + 7);
+            }
+            return newTimeline;
+        }
+
+        // 3. ฟังก์ชันอัปเดต Dropdown เดือนให้ตรงกับปีที่เลือก
+        function updateMonthDropdown() {
+            const monthSelect = document.getElementById('filter-month');
+            monthSelect.innerHTML = '<option value="">-- แสดงทุกเดือน --</option>';
+            for (const month of monthNames) {
+                if (timeline[month]) {
+                    monthSelect.innerHTML += `<option value="${month}">${month}</option>`;
+                }
+            }
+        }
+
+        // 4. ฟังก์ชันสร้างข้อมูลจำลอง (Mock Data) ให้สอดคล้องกับปฏิทินที่สร้างใหม่
+        function generateMockData() {
+            const dbList = [
+                { name: "Business Source Complete", person: "สมชาย" },
+                { name: "Emerald Management", person: "สมศรี" },
+                { name: "Journal Citation Reports (JCR)", person: "สมชาย" },
+                { name: "Newscenter X (NCX)", person: "มาลี" },
+                { name: "SAGE eBooks Collection", person: "มาลี" }
+            ];
+
+            let data = [];
+            dbList.forEach((db, index) => {
+                let row = { id: index + 1, dbName: db.name, person: db.person, data: {} };
+                // สร้างตัวเลขสุ่มให้แต่ละสัปดาห์ที่มีใน Timeline
+                for (const [month, weeks] of Object.entries(timeline)) {
+                    row.data[month] = {};
+                    weeks.forEach(week => {
+                        // สุ่มเลข 0-5
+                        row.data[month][week] = Math.floor(Math.random() * 6);
+                    });
+                }
+                data.push(row);
+            });
+            return data;
+        }
+
+        // 5. เมื่อมีการเปลี่ยนปีใน Dropdown
+        function onYearChange() {
+            const selectedYear = document.getElementById('filter-year').value;
+            timeline = generateTimelineByYear(selectedYear);
+            updateMonthDropdown();
+            rawData = generateMockData();
+            applyFilters();
+        }
+
+        // 6. ฟังก์ชันวาดตาราง
         function renderTable() {
             const thead = document.getElementById('table-head');
             const tbody = document.getElementById('table-body');
-            
-            // ล้างข้อมูลเก่า
-            thead.innerHTML = '';
-            tbody.innerHTML = '';
+            thead.innerHTML = ''; tbody.innerHTML = '';
 
-            // ตรวจสอบ Filter เดือนว่าถูกเลือกหรือไม่
             const selectedMonth = document.getElementById('filter-month').value;
             let activeMonths = selectedMonth ? { [selectedMonth]: timeline[selectedMonth] } : timeline;
 
-            // 1. สร้าง Header Row 1 (เดือน)
-            let tr1 = document.createElement('tr');
-            tr1.innerHTML = `<th rowspan="2" style="width: 50px;">ลำดับ</th><th rowspan="2" style="width: 250px;">ฐานข้อมูล</th>`;
-            
-            // 2. สร้าง Header Row 2 (สัปดาห์)
-            let tr2 = document.createElement('tr');
+            // --- สร้าง Header ---
+            let trHeader1 = document.createElement('tr');
+            let trHeader2 = document.createElement('tr');
+
+            trHeader1.innerHTML = `<th rowspan="2" style="width: 50px; min-width: 50px;">ลำดับ</th><th rowspan="2" style="width: 250px; min-width: 250px;">ฐานข้อมูล</th>`;
 
             for (const [month, weeks] of Object.entries(activeMonths)) {
                 if(!weeks) continue;
-                tr1.innerHTML += `<th colspan="${weeks.length}">${month}</th>`;
-                weeks.forEach(week => {
-                    tr2.innerHTML += `<th>${week}</th>`;
-                });
+                trHeader1.innerHTML += `<th colspan="${weeks.length}">${month}</th>`;
+                weeks.forEach(week => { trHeader2.innerHTML += `<th>${week}</th>`; });
             }
-            thead.appendChild(tr1);
-            thead.appendChild(tr2);
 
-            // 3. สร้าง Body Data
-            if (currentData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="100%">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
+            thead.appendChild(trHeader1);
+            thead.appendChild(trHeader2);
+
+            // --- สร้าง Body ---
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="100%" style="padding: 20px; color: red;">ไม่พบข้อมูลที่ค้นหา</td></tr>`;
                 return;
             }
 
-            currentData.forEach((row, index) => {
+            filteredData.forEach((row, index) => {
                 let tr = document.createElement('tr');
-                tr.innerHTML = `<td>${index + 1}</td><td class="text-left">${row.dbName} <br><small style="color:gray;">ผู้รับผิดชอบ: ${row.person}</small></td>`;
+                tr.innerHTML = `<td>${index + 1}</td><td class="text-left"><strong>${row.dbName}</strong> <br><span style="font-size: 11px; color: #777;">ผู้รับผิดชอบ: ${row.person}</span></td>`;
                 
                 for (const [month, weeks] of Object.entries(activeMonths)) {
                     if(!weeks) continue;
                     weeks.forEach(week => {
-                        // ดึงค่าตามเดือนและสัปดาห์ ถ้าไม่มีให้เป็น '-'
-                        let value = (row.data[month] && row.data[month][week] !== undefined) ? row.data[month][week] : 0;
-                        tr.innerHTML += `<td>${value}</td>`;
+                        let val = (row.data[month] && row.data[month][week] !== undefined) ? row.data[month][week] : 0;
+                        tr.innerHTML += `<td>${val}</td>`;
                     });
                 }
                 tbody.appendChild(tr);
             });
         }
 
-        // ฟังก์ชันสำหรับการค้นหา / กรองข้อมูล
+        // 7. จัดการ Filter การค้นหา
         function applyFilters() {
-            const filterDb = document.getElementById('filter-db').value.toLowerCase();
-            const filterPerson = document.getElementById('filter-person').value.toLowerCase();
-            // การกรองเดือนจะไปมีผลตอน renderTable ในตัวแปร activeMonths
-
-            currentData = mockData.filter(item => {
-                const matchDb = item.dbName.toLowerCase().includes(filterDb);
-                const matchPerson = item.person.toLowerCase().includes(filterPerson);
-                return matchDb && matchPerson;
+            const dbKeyword = document.getElementById('filter-db').value.toLowerCase();
+            const personKeyword = document.getElementById('filter-person').value.toLowerCase();
+            
+            filteredData = rawData.filter(item => {
+                return item.dbName.toLowerCase().includes(dbKeyword) && item.person.toLowerCase().includes(personKeyword);
             });
-
             renderTable();
         }
 
-        // เริ่มต้นการทำงาน
+        // Initial Setup ตอนโหลดหน้าเว็บ
         window.onload = () => {
-            renderTable();
-            // fetchData(); // หากพร้อมใช้งาน API จริง ให้เรียกใช้บรรทัดนี้
+            initYearDropdown();
+            onYearChange(); // สั่งให้คำนวณและวาดตารางครั้งแรก
         };
     </script>
 </body>
